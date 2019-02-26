@@ -1,0 +1,164 @@
+CT-213 01
+
+NORVIG, Peter; RUSSEL, Stuart. Artificial Intelligence: Modern Approach.
+GOODFELLOW, Ian; BENGIO, Yoshua; COURVILLE, Aaron. Deep learning.
+SUTTON, R.S; BARTO, A.G. Reinforcement Learning.
+
+Python
+Numpy
+TensorFlow
+OpenAI Gym
+
+Python Tools::
+
+Anaconda
+PyCharm
+
+-------------------------------------------------------------------------------------------------------------
+
+Arquitetura de Agente:
+
+    Agente -> Programa de IA 
+    Tarefas Complexas -> Difícil pensar de "uma vez só" -> Quebrar em vários "comportamentos" (behaviors)
+    Organizar behaviors com Máquina de Estados Finitos e Bahaviors Trees
+
+Busca Informada: 
+
+    Dijkstra Mais Eficiente
+    Localização de um ponto específico por um robô e deslocamento até este
+    Pensar como uma busca de caminho em grafos
+    Preferencia por caminhos retos 
+
+Otimização:
+
+    Máximos e mínimos de funções de custo
+    Trabalho com amostragem, não há expressão matemática para a função
+    Heurística infinita ao redor de locais bizus
+
+Visão Computacional:
+
+    Imagem -> matriz de números
+    Identificação de objetos
+
+Aprendizado de Máquina
+
+    Aprendizado SUpervisionado -> Mostra-se exemplos ao computador
+    Aprendizado Não-Supervisionado -> Encontrar padrões
+    Aprendizado por Reforço: Recompensas
+    Desempenho em Visão
+    Deep Learning -> Conjunto de técnincas que permite trainar redes neurais profundas
+
+-------------------------------------------------------------------------------------------------------------
+
+Máquina de Estados e Bahavior Trees
+
+    Difícil pensar de "uma vez só"
+    Necessário organizar os behaviors
+    Comportamentos podem ser compostos por comportamentos
+
+    Finite State machine
+
+        Modelo matemático para descrver sistema 
+        Apenas um estado a cada momento 
+        Acontecimentos levam a mudança de estados 
+        Possui limitações teoricas
+        Na prática, memória e máquinas hierárquicas - cada estado pode ser uma máquina de estado - (HFSM) resolvem limitações
+        
+        Vantagens: 
+
+            Intuitiva
+            Fácil de Usar
+            Não requer treinamento
+
+        Desvantagens:
+
+            Difícil de gerenciar e adicionar estados
+        
+        Usar polimorfismo
+        Problema de Histerese: Ruídos -> Agente fica oscilando entre estados e não faz nada -> 
+                                        "Energia de Ativação" de passar do estado 1 pro 2 é quase o mesmo de 2 pra 1
+
+    Behavior Trees
+
+        Decisões nos nós internos (tasks - tarefas)
+        Padrão no mundo dos jogos - bizu pq tem muitas coisas acontecendo ao mesmo tempo aumentando a complexidade
+        Folhas são os comportamentos mais básicos
+        Composição de comportamentos com nós especiais
+        Nós especiais (decorators) mudam comportamento de nó sem precisar reescrevê-lo
+
+        Execução de cada nó retorna um de três valores:
+
+            Sucess
+            Failure
+            Running
+
+        Nós Folhas (Leaf Tasks) 
+
+            Ações: Executam Ações
+            Condições: Verifica condições
+
+        Nós compostos
+
+            Nós internos
+            3 tipos básicos:
+
+                Sequence (AND): Executa cada filho em sequencia e retorna sucess quando o ultimo filho retorna success, retorna failure se algum filho retorna failure
+                Selector (OR): Executa cara filho em sequencia, retorna success quando algum filho retorna success, retorna failure se todos retornarem failure 
+                Random Sequence/Selector: A ordem de execução é aleatória
+                Parallel: Executa todos os filhos ao mesmo tempo, pode usar multi-threading ou não 
+
+                    Política Sequence: Failure se algum falhar e success se todos success
+                    Política Selector: Ao contrário
+
+                    Uso em ações não conflitantes
+                    Verificação contínua de condições
+                    Comportamento coletivo
+
+                Decorator: Modifica comportamento sem precisar alterar sua implementação
+
+                    Always Fail: retorna failure independente do resultado da tarefas
+                    Always Succed: retorna success always
+                    Invert: Retorna o valor invertido do resultado da tarefa
+                    Limit: Executa tarefa até no máximo um número de vezes
+                    Repeat: Executa n vezes
+                    Until Fail: Executa até falhar
+                    Until Succes: "     até success 
+
+        É possível que uma tarefa da behavior tree seja uma FMS 
+        
+---------------------------------------------------------------------------------------------------------------------------
+
+Laboratório 1
+
+Implementar FSM e BT em um Roomba (simplificado) em Python3
+Enquanto limpa, segue dois comportamentos:
+    Seguir reto para frente
+    Limpar em espiral
+
+    Se bater: Volta pra trás -> gira um angulo aleatorio (-pi até pi) -> segue em frente
+    Equação da espiral: r(t) = ro(t) + b*t
+    Controle de v linear e w angular (v = wr)
+    Sensor: bumper
+    Tempo de amostragem: 1/60s
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

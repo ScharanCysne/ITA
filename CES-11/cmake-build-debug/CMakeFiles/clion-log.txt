@@ -1,0 +1,16 @@
+/home/shazam/Downloads/CLion-2018.2.4/clion-2018.2.4/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/shazam/Desktop/projetos/CES-11
+-- Configuring done
+CMake Error at CMakeLists.txt:8 (add_executable):
+  Cannot find source file:
+
+    Nicholas_Scharan_Cysne_05.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .cu .m .M .mm .h .hh .h++ .hm
+  .hpp .hxx .in .txx
+
+
+CMake Error at CMakeLists.txt:8 (add_executable):
+  No SOURCES given to target: 05
+
+
+-- Build files have been written to: /home/shazam/Desktop/projetos/CES-11/cmake-build-debug

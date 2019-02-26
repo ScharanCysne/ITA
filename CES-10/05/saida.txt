@@ -1,0 +1,12 @@
+Programa cardapio De Sobremesas
+Opcoes: Bolo, Gelatina, Fruta, Sorvete
+Os pedidos de hoje sao:
+-----
+ 33 Bolos, 11 Gelatinas, 19 Frutas e 3 Sorvetes.
+ 1 Bolo, 2 Gelatinas, 1 Fruta e 4 Sorvetes.
+ 5 Gelatinas.
+ 9 Bolos, 1 Gelatina e 27 Sorvetes.
+ 9 Bolos, 1 Gelatina e 27 Frutas.
+ 35 Bolos.
+ 7 Gelatinas e 55 Sorvetes.
+ 1 Bolo e 2 Gelatinas.

@@ -1,0 +1,103 @@
+CT-213 02 - Busca Informada 
+
+    Revisão
+
+    Exemplos:
+
+        Planejamento de Caminhos
+            Transformar o local num grid e achar o menor caminho de um ponto ao outro
+        
+        Planejamento de ações no S2D
+            Pensar em sequência de ações cooperativas
+
+    Modelagem do problema de busca:
+        
+        Estados: Situações possíveis no mundo.
+        Ações: O que o agent pode fazer
+        Função sucessor: s' = f(s,a)
+        Estado inicial
+        Objetivo
+
+    Algortimo de busca: Explorar os estados através da função sucessor até atingir 
+    o objetivo, construindo uma árvore de busca para evitar voltar a um estado já visitado.
+
+        Estados: Posições no grid discretizado.
+        Ações: Movimentos (4-conectado ou 8-conectado)
+        Função sucessor: Posição após executar o movimento.
+
+    Planejamento de Caminho x Planejamento de Trajetória
+
+    Caminho - Sabe-se x, y e a curva formdada.
+    Trajetória - Sabe-se o caminho e a posição em relação ao tempo. Usa-se malha de controle.
+
+    Solução Clássica para problemas de caminho mínimo em árvores e grafos: BFS.
+
+    Problema de caminho Mínimo:
+
+        Problema muito importante para grafos
+        Aplicação para robótica em navegação de robôs
+        Se o custo é unitário ou não por caminho, o BFS gera o caminho ótimo
+        O BFS é capaz de encontrar o caminho para qualquer nó do grafo.
+
+        Dijkstra para caminhos de custo aleatórios
+        Usar junto uma fila de prioridades com heap 
+
+    Busca Informada:
+
+        Dijkstra acha a solução ótima, mas visita muitos nós.
+        É possível acelerar a busca com o conhecimento de domínio (informação).
+        Considerar primeiro os nós mais prmissores (best-first search)
+        Estimativa de quão promissor é certo nó 
+        Usa-se a função de avaliação de heurística (carteação) para estimar a promessa de um nó 
+        Para caminho mínimo, usa-se a estimativa de custo até o objetivo 
+        
+        g(n) = custo do início até o nó atual           Usado em Dijkstra
+        h(n) = heurística do nó n até o objetivo        Usado em Busca Gulosa
+        f(n) = g(n) + custo(n, n->prox) + h(n->prox)    Usado em A*
+
+    Heurística:
+
+        Heurística admissível: h(n) <= h*(n) (heurística ótima)
+        Heurística admissível garante um A* ótimo em árvore
+        Heurística consistente: h(n) <= custo(n, n') + h(n')
+        Heurística consistente garante um A* ótimo em grafos
+
+        Como encontrar uma heurística?
+
+            "Criatividade" cartas
+            Pensar no problema relaxado
+            Distância euclidiana, distância de manhattan
+
+    Geração de Grafos para Planejamento de Caminhos 
+
+        Para aplicar o A*, é necessário gerar um grafo que representa o mapa
+        Considera-se o robo pontual: aumentar o tamanho dos obstáculos
+        Adicionar uma margem de segurança nos obstáculos para acomodar erros
+        Reconstruir o grid para locais dinâmicos
+        Grid Ocupacional
+        Resolução do grid é um trade-off de precisão e custo computacional
+        Movimento em diagonal para o 8-conectado tem um custo de raiz de 2
+        Maiores custos para terrenos diferentes (água, atrito, em volta de obstáculos, etc)
+        É possível utilizar usar resolução variável no grid 
+
+        Probabilistic Roadmap
+        Visibility Graph 
+
+    ----------------------------------------------------------------------------------------------------------
+
+    Lab 02
+
+        Implementar :
+
+            Dijkstra
+            Greedy
+            A* 
+
+        Comparar as implementações em termos de tempo computacional e custo de caminho 
+        8-conectado (custo de movimento na diagonal raiz de 2)
+        Custo maior na proximidade de obstáculos (custo 2)
+        Custos das arestas é a média dos custos dos nós vezes o fator 
+
+        Uso de heap do Python3:
+
+            criaçãi, inserção, extração;
