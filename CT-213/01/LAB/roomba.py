@@ -97,6 +97,6 @@ class Roomba(object):
         """
         Updates the robot, including its behavior.
         """
-        self.behavior.update(self)
+        self.behavior.update(self)  # self == roomba
         self.move()
 

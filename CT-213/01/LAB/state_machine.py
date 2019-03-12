@@ -13,7 +13,7 @@ class FiniteStateMachine(object):
     def change_state(self, new_state):
         self.state = new_state
 
-    def update(self, agent):
+    def update(self, agent):        # agent == roomba
         self.state.check_transition(agent, self)
         self.state.execute(agent)
 
@@ -52,54 +52,83 @@ class State(object):
 class MoveForwardState(State):
     def __init__(self):
         super().__init__("MoveForward")
-        # Todo: add initialization code
+        self.timer = 0      # Begin to measure time at this State
 
     def check_transition(self, agent, state_machine):
-        # Todo: add logic to check and execute state transition
+        if agent.get_bumper_state():    # Check if roomba hit something
+            agent.set_velocity(0, 0)    # If so, stop imeaditily and go back
+            state_machine.change_state(GoBackState())
+        elif self.timer > MOVE_FORWARD_TIME:    # If didn't hit anything and moved beyond time set, start spiral
+            state_machine.change_state(MoveInSpiralState())
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        agent.set_velocity(FORWARD_SPEED, 0)
+        self.timer += SAMPLE_TIME
         pass
 
 
 class MoveInSpiralState(State):
     def __init__(self):
         super().__init__("MoveInSpiral")
-        # Todo: add initialization code
+        self.timer = 0      # Begin to measure time at this State
     
     def check_transition(self, agent, state_machine):
-        # Todo: add logic to check and execute state transition
+        if agent.get_bumper_state():
+            agent.set_velocity(0, 0)
+            state_machine.change_state(GoBackState())
+        elif self.timer > MOVE_IN_SPIRAL_TIME:
+            state_machine.change_state(MoveForwardState())
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        agent.set_velocity(FORWARD_SPEED, FORWARD_SPEED/(INITIAL_RADIUS_SPIRAL + SPIRAL_FACTOR*self.timer))
+        self.timer += SAMPLE_TIME
         pass
 
 
 class GoBackState(State):
     def __init__(self):
         super().__init__("GoBack")
-        # Todo: add initialization code
+        self.timer = 0      # Begin to measure time at this State
 
     def check_transition(self, agent, state_machine):
-        # Todo: add logic to check and execute state transition
+        if self.timer > GO_BACK_TIME:
+            agent.set_velocity(0, 0)
+            state_machine.change_state(RotateState())
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        agent.set_velocity(BACKWARD_SPEED, 0)
+        self.timer += SAMPLE_TIME
         pass
 
 
 class RotateState(State):
     def __init__(self):
         super().__init__("Rotate")
-        # Todo: add initialization code
+        self.timer = 0      # Begin to measure time at this State
+        self.setAngle = math.pi * ((2 * random.randint(1,101)) - 101) / 99
+        self.angle = 0
 
     def check_transition(self, agent, state_machine):
-        # Todo: add logic to check and execute state transition
+        if self.setAngle > 0 and self.angle >= self.setAngle:
+            agent.set_velocity(0, 0)
+            state_machine.change_state(MoveForwardState())
+
+        if self.setAngle < 0 and self.angle <= self.setAngle:
+            agent.set_velocity(0, 0)
+            state_machine.change_state(MoveForwardState())
+            
         pass
     
     def execute(self, agent):
-        # Todo: add execution logic
+        agent.set_velocity(0, ANGULAR_SPEED)
+        self.timer += SAMPLE_TIME
+        
+        if self.setAngle > 0:
+            self.angle += SAMPLE_TIME * ANGULAR_SPEED
+        elif self.setAngle < 0:
+            self.angle -= SAMPLE_TIME * ANGULAR_SPEED
+        
         pass

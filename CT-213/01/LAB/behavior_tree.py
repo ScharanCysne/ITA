@@ -108,6 +108,7 @@ class SequenceNode(CompositeNode):
         # When this node is entered, no child should be running
         self.running_child = None
 
+
     def execute(self, agent):
         if self.running_child is None:
             # If a child was not running, then the node puts its first child to run
@@ -183,61 +184,117 @@ class RoombaBehaviorTree(BehaviorTree):
     """
     def __init__(self):
         super().__init__()
-        # Todo: construct the tree here
+        self.root = SelectorNode("SelectAction")                              # Set tree's root to Selector Node
+
+        self.root.add_child(SequenceNode("Moving"))                     # Give the Selector Node two Sequence Nodes 
+        self.root.add_child(SequenceNode("Bumped"))
+
+        self.root.children[0].add_child(MoveForwardNode())      # For each Sequence Node, give two actions
+        self.root.children[0].add_child(MoveInSpiralNode())
+        self.root.children[1].add_child(GoBackNode())
+        self.root.children[1].add_child(RotateNode())
 
 
 class MoveForwardNode(LeafNode):
     def __init__(self):
         super().__init__("MoveForward")
-        # Todo: add initialization code
+        
 
     def enter(self, agent):
-        # Todo: add enter logic
+        print("Move Forward")
+        self.timer = 0                          # Begin to measure time at this State
+        agent.set_velocity(FORWARD_SPEED, 0)
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        self.timer += SAMPLE_TIME
+
+        if agent.get_bumper_state():            # Check if roomba hit something
+            agent.set_velocity(0, 0)            # If so, stop imeaditily and go back
+            return ExecutionStatus.FAILURE
+        elif self.timer > MOVE_FORWARD_TIME:    # If didn't hit anything and moved beyond time set, start spiral
+            return ExecutionStatus.SUCCESS
+
+        return ExecutionStatus.RUNNING
         pass
 
 
 class MoveInSpiralNode(LeafNode):
     def __init__(self):
         super().__init__("MoveInSpiral")
-        # Todo: add initialization code
+        
 
     def enter(self, agent):
-        # Todo: add enter logic
+        print("Move in Spiral")
+        self.timer = 0                          # Begin to measure time at this State
+        agent.set_velocity(FORWARD_SPEED, FORWARD_SPEED/INITIAL_RADIUS_SPIRAL)
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        self.timer += SAMPLE_TIME
+
+        agent.set_velocity(FORWARD_SPEED, FORWARD_SPEED/(INITIAL_RADIUS_SPIRAL + SPIRAL_FACTOR*self.timer))
+
+        if agent.get_bumper_state():
+            agent.set_velocity(0, 0)
+            return ExecutionStatus.FAILURE
+        elif self.timer > MOVE_IN_SPIRAL_TIME:
+            return ExecutionStatus.SUCCESS
+            
+        return ExecutionStatus.RUNNING
         pass
 
 
 class GoBackNode(LeafNode):
     def __init__(self):
         super().__init__("GoBack")
-        # Todo: add initialization code
+                                # Begin to measure time at this State
 
     def enter(self, agent):
-        # Todo: add enter logic
+        print("Go Back!")
+        self.timer = 0  
+        agent.set_velocity(BACKWARD_SPEED, 0)
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        self.timer += SAMPLE_TIME
+
+        if self.timer > GO_BACK_TIME:
+            agent.set_velocity(0, 0)
+            return ExecutionStatus.SUCCESS
+
+        return ExecutionStatus.RUNNING
         pass
 
 
 class RotateNode(LeafNode):
     def __init__(self):
         super().__init__("Rotate")
-        # Todo: add initialization code
 
     def enter(self, agent):
-        # Todo: add enter logic
+        print("Rotate")
+        self.timer = 0                          # Begin to measure time at this State
+        self.angle = 0                          # Set initial angle
+        self.setAngle = math.pi * ((2 * random.randint(1,101)) - 101) / 99
+        agent.set_velocity(0, ANGULAR_SPEED)
         pass
 
     def execute(self, agent):
-        # Todo: add execution logic
+        self.timer += SAMPLE_TIME
+
+        if self.setAngle > 0:
+            self.angle += SAMPLE_TIME * ANGULAR_SPEED
+        elif self.setAngle < 0:
+            self.angle -= SAMPLE_TIME * ANGULAR_SPEED
+
+        if self.setAngle > 0 and self.angle >= self.setAngle:
+            agent.set_velocity(0, 0)
+            return ExecutionStatus.SUCCESS
+
+        if self.setAngle < 0 and self.angle <= self.setAngle:
+            agent.set_velocity(0, 0)
+            return ExecutionStatus.SUCCESS
+
+        return ExecutionStatus.RUNNING
         pass
 
