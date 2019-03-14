@@ -202,7 +202,7 @@ class Node(object):
         """
         self.i = i
         self.j = j
-        self.f = inf
+        self.h = inf
         self.g = inf
         self.closed = False
         self.parent = None
@@ -228,11 +228,26 @@ class Node(object):
         self.i = i
         self.j = j
 
+    def set_parent(self, parent):
+        """
+        Sets the parent of this node.
+
+        :param parent: parent of the node in the occupancy grid.
+        :type parent: Node.
+        """
+        self.parent = parent
+
+    def close_node(self):
+        """
+        Closes this node.
+        """
+        self.closed = True
+
     def reset(self):
         """
         Resets the node to prepare it for a new path planning.
         """
-        self.f = inf
+        self.h = inf
         self.g = inf
         self.closed = False
         self.parent = None
