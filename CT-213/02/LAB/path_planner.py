@@ -62,7 +62,7 @@ class PathPlanner(object):
             node = node.parent
         return reversed_path[::-1]  # This syntax creates the reverse list
 
-    def dijkstra(self, start_position, goal_position):
+    def dijkstra(self, successorNode, node, start_position, goal_position):
         """
         Plans a path using the Dijkstra algorithm.
 
@@ -74,7 +74,62 @@ class PathPlanner(object):
         :rtype: list of tuples and float.
         """
   
-        self.pq = []      
+        if successorNode.g > node.g + self.cost_map.get_edge_cost([node.i, node.j], successorNode.get_position()):
+            successorNode.g = node.g + self.cost_map.get_edge_cost([node.i, node.j], successorNode.get_position())
+            successorNode.set_parent(node)
+            self.add_heap(successorNode.g, successorNode)
+
+    def greedy(self, successorNode, node, start_position, goal_position):
+        """
+        Plans a path using greedy search.
+
+        :param start_position: position where the planning stars as a tuple (x, y).
+        :type start_position: tuple.
+        :param goal_position: goal position of the planning as a tuple (x, y).
+        :type goal_position: tuple.
+        :return: the path as a sequence of positions and the path cost.
+        :rtype: list of tuples and float.
+        """
+       
+        successorNode.set_parent(node)
+        successorNode.h = successorNode.distance_to(goal_position[0], goal_position[1])
+        self.add_heap(successorNode.h, successorNode)
+                    
+    def a_star(self, successorNode, node, start_position, goal_position):
+        """
+        Plans a path using A*.
+
+        :param start_position: position where the planning stars as a tuple (x, y).
+        :type start_position: tuple.
+        :param goal_position: goal position of the planning as a tuple (x, y).
+        :type goal_position: tuple.
+        :return: the path as a sequence of positions and the path cost.
+        :rtype: list of tuples and float.
+        """
+        
+        distance_goal_point = successorNode.distance_to(goal_position[0], goal_position[1])
+        edge_cost = self.cost_map.get_edge_cost([node.i, node.j], successorNode.get_position())
+        if successorNode.g + distance_goal_point > node.g + edge_cost + distance_goal_point:
+            successorNode.set_parent(node)
+            successorNode.h = successorNode.distance_to(goal_position[0], goal_position[1])
+            successorNode.g = node.g + edge_cost
+            self.add_heap(successorNode.h + successorNode.g, successorNode)
+    
+    def search(self, algorithm, start_position, goal_position):
+        """
+        Plans a path using the choosed algorithm.
+
+        :param algorithm: algorithm used to search goal_position.
+        :type algorithm: function.
+        :param start_position: position where the planning stars as a tuple (x, y).
+        :type start_position: tuple.
+        :param goal_position: goal position of the planning as a tuple (x, y).
+        :type goal_position: tuple.
+        :return: the path as a sequence of positions and the path cost.
+        :rtype: list of tuples and float.
+        """
+
+        self.pq = []
         root = self.node_grid.get_node(start_position[0], start_position[1])
         root.g = 0
         
@@ -95,84 +150,4 @@ class PathPlanner(object):
                 successorNode = self.node_grid.get_node(successor[0], successor[1])
 
                 if not successorNode.closed:
-                    if successorNode.g > node.g + self.cost_map.get_edge_cost([node.i, node.j], successor):
-                        successorNode.g = node.g + self.cost_map.get_edge_cost([node.i, node.j], successor)
-                        successorNode.set_parent(node)
-                        self.add_heap(successorNode.g, successorNode)
-
-    def greedy(self, start_position, goal_position):
-        """
-        Plans a path using greedy search.
-
-        :param start_position: position where the planning stars as a tuple (x, y).
-        :type start_position: tuple.
-        :param goal_position: goal position of the planning as a tuple (x, y).
-        :type goal_position: tuple.
-        :return: the path as a sequence of positions and the path cost.
-        :rtype: list of tuples and float.
-        """
-       
-        self.pq = []     
-        root = self.node_grid.get_node(start_position[0], start_position[1])
-        root.h = root.distance_to(goal_position[0], goal_position[1])
-        self.add_heap(root.h, root)
-
-        while self.pq:
-            _, node = heapq.heappop(self.pq)
-            node.close_node()
-            
-            if (node.get_position()) == goal_position:
-                path = self.construct_path(self.node_grid.get_node(goal_position[0], goal_position[1]))
-                total_cost = self.path_cost(path) 
-
-                self.node_grid.reset()
-                return path, total_cost
-
-            for successor in self.node_grid.get_successors(node.i, node.j):
-                successorNode = self.node_grid.get_node(successor[0], successor[1])
-
-                if not successorNode.closed:
-                    successorNode.set_parent(node)
-                    successorNode.h = successorNode.distance_to(goal_position[0], goal_position[1])
-                    self.add_heap(successorNode.h, successorNode)
-                    
-    def a_star(self, start_position, goal_position):
-        """
-        Plans a path using A*.
-
-        :param start_position: position where the planning stars as a tuple (x, y).
-        :type start_position: tuple.
-        :param goal_position: goal position of the planning as a tuple (x, y).
-        :type goal_position: tuple.
-        :return: the path as a sequence of positions and the path cost.
-        :rtype: list of tuples and float.
-        """
-          
-        self.pq = []     
-        root = self.node_grid.get_node(start_position[0], start_position[1])
-        root.h = root.distance_to(goal_position[0], goal_position[1])
-        root.g = 0
-        self.add_heap(root.h + root.g, root)
-
-        while self.pq:
-            _, node = heapq.heappop(self.pq)
-            node.close_node()
-            
-            if (node.get_position()) == goal_position:
-                path = self.construct_path(self.node_grid.get_node(goal_position[0], goal_position[1]))
-                total_cost = self.path_cost(path) 
-
-                self.node_grid.reset()
-                return path, total_cost
-
-            for successor in self.node_grid.get_successors(node.i, node.j):
-                successorNode = self.node_grid.get_node(successor[0], successor[1])
-
-                if not successorNode.closed:
-                    distance_goal_point = successorNode.distance_to(goal_position[0], goal_position[1])
-                    edge_cost = self.cost_map.get_edge_cost([node.i, node.j], successor)
-                    if successorNode.g + distance_goal_point > node.g + edge_cost + distance_goal_point:
-                        successorNode.set_parent(node)
-                        successorNode.h = successorNode.distance_to(goal_position[0], goal_position[1])
-                        successorNode.g = node.g + edge_cost
-                        self.add_heap(successorNode.h + successorNode.g, successorNode)
+                    algorithm(successorNode, node, start_position, goal_position)

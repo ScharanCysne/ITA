@@ -8,8 +8,8 @@ import time
 
 # Select planning algorithm
 #algorithm = 'dijkstra'
-algorithm = 'greedy'
-#algorithm = 'a_star'
+#algorithm = 'greedy'
+algorithm = 'a_star'
 
 # Number of path plannings used in the Monte Carlo analysis
 #num_iterations = 1
@@ -99,11 +99,11 @@ for i in range(num_iterations):
         problem_valid = True
     tic = time.time()
     if algorithm == 'dijkstra':
-        path, cost = path_planner.dijkstra(start_position, goal_position)
+        path, cost = path_planner.search(path_planner.dijkstra, start_position, goal_position)
     elif algorithm == 'greedy':
-        path, cost = path_planner.greedy(start_position, goal_position)
+        path, cost = path_planner.search(path_planner.greedy, start_position, goal_position)
     else:
-        path, cost = path_planner.a_star(start_position, goal_position)
+        path, cost = path_planner.search(path_planner.a_star, start_position, goal_position)
     # if path is not None and len(path) > 0:
     path_found = True
     toc = time.time()
