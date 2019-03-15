@@ -123,7 +123,7 @@ class CostMap(object):
         :param num_obstacles: number of obstacles.
         :type num_obstacles: int.
         """
-        for i in range(num_obstacles):
+        for _ in range(num_obstacles):
             self.add_random_obstacle(obstacle_width, obstacle_height)
 
 
