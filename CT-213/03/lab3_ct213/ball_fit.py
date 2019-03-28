@@ -167,9 +167,9 @@ def plot_optimization(history):
     return handle
 
 
-#fig_format = 'png'
+fig_format = 'png'
 # fig_format = 'svg'
-fig_format = 'eps'
+#fig_format = 'eps'
 # Recommended figure formats: .eps for Latex/Linux, .svg for MS Office, and .png for easy visualization in Windows.
 # The quality of .eps and .svg is far superior since these are vector graphics formats.
 

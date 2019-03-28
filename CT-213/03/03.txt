@@ -1,6 +1,0 @@
-CT-213 02 - Otimização e Função de Custo
-
-	- Multiplicadores de Lagrange
-	- Método dos Mínimos Quadrados
-
-	 Sugou
