@@ -3,40 +3,28 @@
 #
 # CCI-22 Professor: Johnny
 # Zero de Funções
-# Método do Ponto Fixo
+# Método de Newton-Raphson
 
 import random
 import math
-
-def createPhi(polinom):
     
-    phi = [0]*len(polinom)
-    for i in range(len(polinom)):
-        phi[i] -= polinom[i]
-        phi[i] /= polinom[len(phi) - 2]
-
-    phi[len(phi) - 2] = 0
-    return phi
-    
-
-def fixedPoint(parameters, calculate):
+def newtonRaphson(parameters, calculate):
 
     interval = parameters[0]
     epsilon = parameters[1]  
     polinom = parameters[2]
-
-    phi = createPhi(polinom)
-
+    counter = 0
+    
     x = interval[0]
-    if calculate(polinom, x) < epsilon:
-        return interval[0]
+    if math.fabs(calculate(polinom, x)) < epsilon:
+        return interval[0], counter
 
     while True:
 
+        counter += 1
         x_back = x
-        x = calculate(phi, x_back)
-
-        if calculate(polinom, x) < epsilon:
-            return x
+        x = x - calculate(polinom, x)/calculate([0, 3, 0, 1],x)
+        if math.fabs(calculate(polinom, x)) < epsilon:
+            return x, counter
         if math.fabs(x - x_back) < epsilon:
-            return x
+            return x, counter
