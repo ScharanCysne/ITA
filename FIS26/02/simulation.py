@@ -2,9 +2,9 @@ from environment import *
 
 if __name__ == "__main__":
 
-    #mode = "WITHOUT"
+    mode = "WITHOUT"
     #mode = "TEST_BLOCK"
-    mode = "EVALUATION_OBJECT"
+    #mode = "EVALUATION_OBJECT"
 
     environment = Environment(mode, False)
     time.sleep(10)
