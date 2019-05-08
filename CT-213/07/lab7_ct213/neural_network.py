@@ -27,10 +27,10 @@ class NeuralNetwork:
         self.alpha = alpha
         self.weights = [None] * 3
         self.biases = [None] * 3
-        self.weights[1] = 0.001 * np.matrix(np.random.randn(num_hiddens, num_inputs))   # Shape: (10, 2)
-        self.weights[2] = 0.001 * np.matrix(np.random.randn(num_outputs, num_hiddens))  # Shape: (1, 10)
-        self.biases[1] = np.zeros((num_hiddens, 1))     # Shape: (10, 1)
-        self.biases[2] = np.zeros((num_outputs, 1))     # Shape: (1, 1)
+        self.weights[1] = 0.001 * np.matrix(np.random.randn(num_hiddens, num_inputs))   
+        self.weights[2] = 0.001 * np.matrix(np.random.randn(num_outputs, num_hiddens))  
+        self.biases[1] = np.zeros((num_hiddens, 1))     
+        self.biases[2] = np.zeros((num_outputs, 1))     
 
     def forward_propagation(self, input):
         """
@@ -106,21 +106,23 @@ class NeuralNetwork:
         for i in range(num_cases):
             z, a = self.forward_propagation(inputs[i])
             outputs[i] = a[-1]
-            
+        
         y = np.array(expected_outputs)
         yhat = np.array(outputs)
-        
-        for i in range(num_cases):
-            y_error = np.array(yhat[i] - y[i])       
-            biases_gradient[2] += y_error
-            weights_gradient[2] += a[1]*np.transpose(y_error)
-        
-            sum_factor = np.zeros((len(z[1]), 1)) 
-            for k in range (len(z[1])):
-                sum_factor[k] = np.array(self.weights[2])[0][k]*np.asscalar(yhat[i] - y[i])*np.asscalar(sigmoid_derivative(np.array(z[1])[k]))
+        deltas = [0, 0, 0]
 
-            biases_gradient[1] += sum_factor
-            weights_gradient[1] += sum_factor*np.transpose(a[0])
+        for i in range(num_cases):
+            deltas[2] = np.array(yhat[i] - y[i])       
+            biases_gradient[2] += deltas[2]
+            weights_gradient[2] += deltas[2]*np.transpose(a[1])
+        
+            deltas[1] = np.zeros((self.num_hiddens, 1))
+            for k in range (len(biases_gradient[2])):
+                for j in range (len(z[1])):
+                    deltas[1][j] += np.asscalar(np.sum(self.weights[1], axis=1)[j]*deltas[2][k]*sigmoid_derivative(z[1][j]))
+            
+            biases_gradient[1] += deltas[1]
+            weights_gradient[1] += deltas[1]*np.transpose(a[0]) 
 
         weights_gradient[1] /= num_cases
         weights_gradient[2] /= num_cases
