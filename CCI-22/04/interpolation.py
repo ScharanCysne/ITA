@@ -30,6 +30,7 @@ vector_f2 = np.polyval(function2, vector)
 # Function p(x) of degree 2 for polifit vector and f(vector)
 function1_fitted = np.polyfit(vector, vector_f1, 2)
 vector_f1f = np.polyval(function1_fitted, vector)
+print("Polinom p(x) fitted in vector: {}".format(function1_fitted))
 
 # Maximum absolute error between f(x) and g(x)
 error_vector = np.abs(vector_f1 - vector_f2)

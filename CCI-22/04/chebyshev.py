@@ -38,6 +38,7 @@ vector_p = 9*[0]
 for i in range (9):
     function_fitted[i] = np.polyfit(vector, vector_f, i + 2)
     vector_p[i] = np.polyval(function_fitted[i], vector)
+    print("Fitted Function {}: {}".format(i+2, function_fitted[i]))
 
 # Maximum absolute error between f(x) and p(x)
 for i in range (9):

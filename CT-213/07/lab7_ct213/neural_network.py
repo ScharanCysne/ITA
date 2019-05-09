@@ -27,8 +27,8 @@ class NeuralNetwork:
         self.alpha = alpha
         self.weights = [None] * 3
         self.biases = [None] * 3
-        self.weights[1] = 0.001 * np.matrix(np.random.randn(num_hiddens, num_inputs))   
-        self.weights[2] = 0.001 * np.matrix(np.random.randn(num_outputs, num_hiddens))  
+        self.weights[1] = np.matrix(0.001 * np.random.randn(num_hiddens, num_inputs))   
+        self.weights[2] = np.matrix(0.001 * np.random.randn(num_outputs, num_hiddens)) 
         self.biases[1] = np.zeros((num_hiddens, 1))     
         self.biases[2] = np.zeros((num_outputs, 1))     
 
@@ -112,24 +112,25 @@ class NeuralNetwork:
         deltas = [0, 0, 0]
 
         for i in range(num_cases):
+            deltas[1] = np.zeros((self.num_hiddens, 1))
             deltas[2] = np.array(yhat[i] - y[i])       
             biases_gradient[2] += deltas[2]
             weights_gradient[2] += deltas[2]*np.transpose(a[1])
+
+            for k in range (len(z[1])):
+                sum = 0
+                for j in range (len(deltas[2])):
+                    sum += np.array(self.weights[2][j])[0][k]*np.asscalar(deltas[2][j])     # Full Cartas para resolver bugs
+                deltas[1][k] = sigmoid_derivative(z[1][k])*sum    
         
-            deltas[1] = np.zeros((self.num_hiddens, 1))
-            for k in range (len(biases_gradient[2])):
-                for j in range (len(z[1])):
-                    deltas[1][j] += np.asscalar(np.sum(self.weights[1], axis=1)[j]*deltas[2][k]*sigmoid_derivative(z[1][j]))
-            
             biases_gradient[1] += deltas[1]
             weights_gradient[1] += deltas[1]*np.transpose(a[0]) 
-
+        
         weights_gradient[1] /= num_cases
         weights_gradient[2] /= num_cases
         biases_gradient[1] /= num_cases
         biases_gradient[2] /= num_cases
 
-        # Return of values for backpropagation
         return weights_gradient, biases_gradient
 
     def back_propagation(self, inputs, expected_outputs):
@@ -147,3 +148,5 @@ class NeuralNetwork:
             self.weights[i] -= self.alpha*weights_gradient[i]
             self.biases[i] -= self.alpha*biases_gradient[i]
         
+        print(self.weights)
+        print(self.biases)
