@@ -102,16 +102,17 @@ class NeuralNetwork:
        
         num_cases = len(inputs)         
         outputs = [None] * num_cases    
-        
+        deltas = [0, 0, 0]
+
         for i in range(num_cases):
             z, a = self.forward_propagation(inputs[i])
             outputs[i] = a[-1]
         
         y = np.array(expected_outputs)
         yhat = np.array(outputs)
-        deltas = [0, 0, 0]
 
         for i in range(num_cases):
+            z, a = self.forward_propagation(inputs[i])
             deltas[1] = np.zeros((self.num_hiddens, 1))
             deltas[2] = np.array(yhat[i] - y[i])       
             biases_gradient[2] += deltas[2]
@@ -147,6 +148,3 @@ class NeuralNetwork:
         for i in range (1, len(self.weights)):
             self.weights[i] -= self.alpha*weights_gradient[i]
             self.biases[i] -= self.alpha*biases_gradient[i]
-        
-        print(self.weights)
-        print(self.biases)
