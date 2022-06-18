@@ -3,9 +3,8 @@ import re
 import numpy as np
 
 from PIL             import Image
-from utils           import binarray2jpg, png2bin, selectComponentToPlace, save_object, rotateBinaryImage
-from random          import random
-from place_component import ComponentPlacing
+from utils           import binarray2jpg, png2bin, selectComponentToPlace
+from placeComponent  import ComponentPlacing
 
 print('Optimizing position in page...')
 
@@ -38,16 +37,16 @@ pages.append(np.zeros(PAGE_SIZE, dtype=int))
 # List of binary matrix of components and its name
 components = [[png2bin(png_components_path+ '/' + png), png] for png in pngs] 
 # Creates a list of objects of class ComponentPlacing
-CP_list = [ComponentPlacing(pages[0], component, covariance_constant=max(pages[0].shape)*.8, num_iterations=300) for component in components]
+CP_list = [ComponentPlacing(pages[0], component, num_iterations=300) for component in components]
 
 # Place components on page
 Results = []
 page_idx = 0
-max_attempts = 50
+max_attempts = 100
 num_components = len(CP_list)
 
 while CP_list:
-    attempt = 0 # counter of times that try to fit component in a page
+    attempt = 0     # counter of times that try to fit component in a page
     # This loop tries to fit a component on current page    
     while attempt < max_attempts:
         # Selects one aleatory component
@@ -61,7 +60,7 @@ while CP_list:
             # removes the placed component from the list and store in results list
             Results.append(CP_list.pop(idx)) 
             num_components -= 1
-            print(('Current page: ' + str(len(pages))).ljust(18) + 'Components remaining: ' + str(num_components)+'...')
+            print(('Current page: ' + str(page_idx+1)).ljust(18) + 'Components remaining: ' + str(num_components)+'...')
             
             if CP_list: 
                 attempt = 0
@@ -69,18 +68,17 @@ while CP_list:
                 break
         else: 
             attempt += 1
-            ang = random()
-            #CP_object.component = rotateBinaryImage(CP_object.component,ang)
-            CP_object.setParameters() # sorts a new initial point
-
+            CP_object.resetParameters() # sorts a new initial point
+            
     # Prepares a new page if necessary
     if CP_list:
-        page_idx += 1
         pages.append(np.zeros(PAGE_SIZE, dtype=int))
+        page_idx += 1
         for CP_object in CP_list:
-            # sorts new initial point for the objects and set new page
-            CP_object.setParameters(page = pages[page_idx], page_idx = page_idx)
-
+            # sorts new initial point for the objects
+            CP_object.page = pages[page_idx]
+            CP_object.page_idx = page_idx
+            CP_object.resetParameters()
 
 # Remove all png files from the folder before storing the results
 files = os.listdir(test_results_path)
@@ -93,8 +91,4 @@ for idx,page in enumerate(pages):
     image = Image.fromarray(image)
     image.save(test_results_path + '/page' + str(idx).zfill(2) + '.png')
 
-print('Saving optimization object results in results.pkl...')
-save_object(Results, opt_results_path)
-
 print('Finished optimization.')
-print('See results in folder test_results_png')

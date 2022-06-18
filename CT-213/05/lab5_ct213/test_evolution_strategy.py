@@ -7,9 +7,9 @@ import cma
 
 
 # Evolution Strategy algorithm (Simple ES or CMA-ES)
-algorithm = 'ses'  # 'ses' or 'cmaes'
+algorithm = 'cmaes'  # 'ses' or 'cmaes'
 # Function which the optimization algorithm will optimize
-function = schaffer2d  # translated_sphere, ackley, schaffer2d, rastrigin
+function = ackley  # translated_sphere, ackley, schaffer2d, rastrigin
 fig_format = 'png'  # 'svg' (Word), 'eps' (Latex), 'png' (best compatibility/worst quality)
 
 

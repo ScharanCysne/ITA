@@ -11,10 +11,6 @@ from utils           import translatePath
 from svgpathtools    import svg2paths2, wsvg, parse_path, Arc
 
 # Select figure in folder
-#svg_name = 'example'
-#svg_name = 'harry-potter'
-#svg_name = 'e190-e2'
-
 for svg_name in ['example', 'harry-potter', 'e190-e2']:
 
     # Components and file paths

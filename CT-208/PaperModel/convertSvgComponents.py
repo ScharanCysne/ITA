@@ -6,10 +6,6 @@ from cairosvg import svg2png
 print('Transforming svg components into png components...')
 
 # Select figure in folder
-#svg_name = 'example'
-#svg_name = 'harry-potter'
-#svg_name = 'e190-e2'
-
 for svg_name in ['example', 'harry-potter', 'e190-e2']:
 
     # Components and file paths
