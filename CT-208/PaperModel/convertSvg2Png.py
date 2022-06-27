@@ -3,11 +3,7 @@ import re
 
 from cairosvg import svg2png
 
-print('Transforming svg components into png components...')
-
-# Select figure in folder
-for svg_name in ['example', 'harry-potter', 'e190-e2']:
-
+def convertSVG2PNG(svg_name):
     # Components and file paths
     svg_components_path = './' + svg_name + '/components_svg'
     png_components_path = './' + svg_name + '/components_png'
@@ -27,4 +23,4 @@ for svg_name in ['example', 'harry-potter', 'e190-e2']:
             background_color = 'white',
             write_to = png_components_path + '/' + svg[:-3] + 'png')
 
-print('Components transformed with success!')
+    print('Components from ' + svg_name + ' transformed with success!')

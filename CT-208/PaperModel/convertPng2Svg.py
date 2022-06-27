@@ -7,9 +7,7 @@ from cairosvg               import svg2pdf
 from svgpathtools           import svg2paths2, svg2paths
 from svgpathtools.paths2svg import wsvg
 
-# Select figure in folder
-for svg_name in ['example', 'harry-potter', 'e190-e2']:
-
+def convertPNG2SVG(svg_name):
     # Components and file paths
     svg_components_path = './' + svg_name + '/components_svg'
     opt_results_path = './' + svg_name + '/results.pkl'
@@ -75,4 +73,4 @@ for svg_name in ['example', 'harry-potter', 'e190-e2']:
     for file in files:
         svg2pdf(url=results_path + '/' + file, write_to=results_path + '/' + file[:-3] + 'pdf')
 
-print('Success! See results in folder results_svg')
+    print('Success! See results in folder /' + svg_name + '/results/')

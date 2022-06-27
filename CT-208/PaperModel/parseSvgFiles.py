@@ -1,8 +1,3 @@
-"""
-This script reads a .svg and processess it to output the
-necessary .png files.
-"""
-
 import re
 import os
 import xml.etree.ElementTree as ET
@@ -10,9 +5,12 @@ import xml.etree.ElementTree as ET
 from utils           import translatePath
 from svgpathtools    import svg2paths2, wsvg, parse_path, Arc
 
-# Select figure in folder
-for svg_name in ['example', 'harry-potter', 'e190-e2']:
 
+def parseSVG(svg_name):
+    """
+    This script reads a .svg and processess it to output the
+    necessary .png files.
+    """
     # Components and file paths
     svg_components_path = './' + svg_name + '/components_svg'
     svg_file_path = './' + svg_name + '/' + svg_name + '.svg'
@@ -143,4 +141,4 @@ for svg_name in ['example', 'harry-potter', 'e190-e2']:
             svg_attributes=components[idx][2], 
                 filename=svg_components_path + "/" + str(idx).zfill(3) + '.svg')
 
-print('Components separated with success!')
+    print('Components from ' + svg_name + ' separated with success!')

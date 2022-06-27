@@ -8,7 +8,7 @@ class ComponentPlacing:
     status that is necessary
     """
 
-    def __init__(self, page, component, num_iterations=200, page_idx=0):
+    def __init__(self, page, component, sigma=1.0, population=8, num_iterations=200, page_idx=0):
         """ 
         :param page: page where component will be placed
         :type page: 2d np int array
@@ -36,7 +36,7 @@ class ComponentPlacing:
             )
         
         # CMA-ES
-        self.es = cma.CMAEvolutionStrategy(m0, 1.0, {"popsize": 18})
+        self.es = cma.CMAEvolutionStrategy(m0, sigma, {"popsize": population})
         self.history_samples = []
         self.placedPosition = np.zeros(3)
         
