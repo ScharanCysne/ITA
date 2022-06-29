@@ -8,8 +8,7 @@ from svgpathtools    import svg2paths2, wsvg, parse_path, Arc
 
 def parseSVG(svg_name):
     """
-    This script reads a .svg and processess it to output the
-    necessary .png files.
+    This script reads a .svg and processess it to output separated .svg files.
     """
     # Components and file paths
     svg_components_path = './' + svg_name + '/components_svg'
