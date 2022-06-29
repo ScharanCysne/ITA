@@ -67,7 +67,7 @@ class ComponentPlacing:
         else:
             intersection_cost = np.sum(page[positionX:positionX+compHeight, positionY:positionY+compLength]*component)
 
-        position_cost = np.sqrt((positionX + compHeight) * (positionY + compLength))
+        position_cost = np.sqrt(positionX * positionY)
         cost = intersection_cost * np.sqrt(pageHeight*pageLength) + position_cost
 
         return cost, rotated
