@@ -1,4 +1,5 @@
 import re
+import pickle
 import numpy as np
 import warnings
 
@@ -70,3 +71,7 @@ def selectComponentToPlace(compList):
         return max(range(len(compList)), key = lambda idx: compList[idx].__getattribute__('area'))
     else:
         return np.random.randint(len(compList))
+
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:  # Overwrites any existing file.
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
