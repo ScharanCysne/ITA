@@ -35,37 +35,44 @@ def convertPNG2SVG(svg_name):
         
     # open the results from optimization
     with open(opt_results_path, 'rb') as input:
-        Results = pickle.load(input)
+        results = pickle.load(input)
 
     # get svg general attributes from original svg
     MM2PX = float(svg_attributes['viewBox'].split()[2]) / float(svg_attributes['width'][:-2])
     _, _, svg_attributes = svg2paths2(svg_name + "/" + svg_name + '.svg')
 
     # Update svg height, length and viewBox attributes to page size
-    height, width = np.shape(Results[0].__getattribute__('page'))
+    height, width = np.shape(results[0].__getattribute__('page'))
     svg_attributes['width'] = str(width) + 'mm'
     svg_attributes['height'] = str(height) + 'mm'
-    svg_attributes['viewBox'] = ' '.join(map(str,[0,0,width*MM2PX,height*MM2PX]))
+    svg_attributes['viewBox'] = ' '.join(map(str,[0, 0, width*MM2PX, height*MM2PX]))
 
     # includes translation results in the svgs
     pages = [[[],[]]]
-    for components in Results:
+    for component in results:
         # chekc page transition - create new page if necessary
-        if components.__getattribute__('page_idx') + 1 > len(pages):
+        if component.__getattribute__('page_idx') + 1 > len(pages):
             pages.append([[],[]])
 
-        paths, attributes = svg2paths(svg_components_path + '/' + components.__getattribute__('name')[:-3] + 'svg')
-        position = components.__getattribute__('placedPosition') * MM2PX
-        position = '(' + str(position[1]) + ',' + str(position[0]) + ')'
+        paths, attributes = svg2paths(svg_components_path + '/' + component.__getattribute__('name')[:-3] + 'svg')
+        positionY, positionX, angle = component.__getattribute__('placedPosition')
+        componentLength = component.__getattribute__('componentLength')
+        componentHeight = component.__getattribute__('componentHeight')
+
         for attribute in attributes:
-            attribute['transform'] = 'translate' + position
+            if angle == 1:
+                attribute['transform'] = 'translate(' + str(positionX * MM2PX) + ',' + str((positionY - componentHeight) * MM2PX) + ') rotate(90)'
+            elif angle == -1:
+                attribute['transform'] = 'translate(' + str(positionX * MM2PX) + ',' + str(positionY * MM2PX) + ') rotate(-90)'
+            else:
+                attribute['transform'] = 'translate(' + str(positionX * MM2PX) + ',' + str(positionY * MM2PX) + ')'
 
         while paths:
             pages[-1][0].append(paths.pop(0))
             pages[-1][1].append(attributes.pop(0))
 
     for idx, page in enumerate(pages):
-        wsvg(paths=page[0] , attributes=page[1], svg_attributes = svg_attributes, filename=results_path + '/page' + str(idx).zfill(2) + '.svg')
+        wsvg(paths=page[0], attributes=page[1], svg_attributes=svg_attributes, filename=results_path + '/page' + str(idx).zfill(2) + '.svg')
 
     files = os.listdir(results_path)
     files = list(filter(lambda name: re.match(name[-3:],'svg'), files))

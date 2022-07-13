@@ -67,7 +67,7 @@ def clamp(value, minimum, maximum):
 
 def selectComponentToPlace(compList):
     # selects the bigger component with prob 20%, otherwise, selects random
-    if np.random.uniform() < 0.15:
+    if np.random.uniform() < 0.5:
         return max(range(len(compList)), key = lambda idx: compList[idx].__getattribute__('area'))
     else:
         return np.random.randint(len(compList))
