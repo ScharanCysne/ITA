@@ -1,17 +1,17 @@
 import pygame as pg
-from utils import Aircraft, random_color, limit, constrain, bivariateFunction, derivativeBivariate, normalFunction
+from utils import random_color, limit, constrain, derivativeBivariate
 from constants import *
-from math import cos, sin, atan2, pi
+from math import cos, sin, atan2
 import random
 import copy 
 
 vec2 = pg.math.Vector2
 
-class Vehicle(object):
+class Drone(object):
 
-    def __init__(self, x,y, behavior, window):
+    def __init__(self, x, y, behavior, window):
         """
-            idealized vehicle representing a drone
+            idealized Drone representing a drone
 
             :param x and y: represents inicial target 
             :param behavior: State Machine 
@@ -44,9 +44,6 @@ class Vehicle(object):
         self.window = window # tela em que esta acontecendo a simulaçao
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
-
-        # Variables to draw drone using Sprites
-        self.drone = Aircraft() 
      
     def reached_goal(self, target):
         return target and (target - self.location).length() <= RADIUS_TARGET 
@@ -78,7 +75,7 @@ class Vehicle(object):
 
     def applyForce(self, force):
         """
-            Applies vetor force to vehicle 
+            Applies vetor force to Drone 
             Newton's second law -> F=m.a
             You can divide by mass
         """
@@ -146,7 +143,7 @@ class Vehicle(object):
         steer = dist - self.velocity
         #Limit the magnitude of the steering force.
         steer = limit(steer, self.max_force)
-        # apply force to the vehicle
+        # apply force to the Drone
         self.applyForce(steer)
         # Simulates Wind - random Noise
         wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
@@ -311,7 +308,7 @@ class Vehicle(object):
     def draw(self, window):
 
         """
-            Defines shape of vehicle and draw it to screen
+            Defines shape of Drone and draw it to screen
         """
 
         # draws track

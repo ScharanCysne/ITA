@@ -1,26 +1,22 @@
 import time, pygame
 
 from utils import Npc_target
-from random import uniform
-from vehicle import Vehicle
+from drone import Drone
 from obstacle import Obstacles
 from constants import *
 from state_machine import FiniteStateMachine, SeekState
 
 class RateSimulation(object):
-    def __init__(self, in_repetitions, in_num_swarm, in_algorithms):
+    def __init__(self, repetitions, num_swarm, algorithm):
         self.current_repetition = 0
+        self.algorithm = algorithm
         
-        # Inputs of Rate
-        self.in_repetitions = in_repetitions * len(in_num_swarm) * len(in_algorithms)
-        
-        self.in_num_swarm = []
-        for n in in_num_swarm:
-            self.in_num_swarm = self.in_num_swarm + [n] * int(self.in_repetitions/len(in_num_swarm))
-        
-        self.in_algorithms = []
-        for a in in_algorithms:
-            self.in_algorithms = self.in_algorithms + [a] * int(self.in_repetitions/len(in_algorithms))
+        # Number of repetitions in total
+        self.repetitions = repetitions * len(num_swarm)
+        # Number of drones in swarm for each iteration
+        self.num_swarm = []
+        for n in num_swarm:
+            self.num_swarm = self.num_swarm + [n] * (repetitions // len(num_swarm))
 
         # Outputs of Rate
         self.out_time = []
@@ -30,7 +26,7 @@ class RateSimulation(object):
         self.out_time.append(out_time)
 
     def next_simulation(self):
-        if self.in_repetitions - 1 == self.current_repetition:
+        if self.repetitions - 1 == self.current_repetition:
             return False
         else:
             self.current_repetition = self.current_repetition + 1
@@ -38,7 +34,7 @@ class RateSimulation(object):
             return True
 
     def print_simulation(self):
-        print(f'{self.current_repetition+1} - num_swarm: {self.in_num_swarm[self.current_repetition]}, Algorithm: {self.in_algorithms[self.current_repetition].to_string()}')
+        print(f'{self.current_repetition+1} - num_swarm: {self.num_swarm[self.current_repetition]}, Algorithm: {self.algorithm.to_string()}')
 
 
 class ScreenSimulation(object):
@@ -63,14 +59,14 @@ class Simulation(object):
         self.obstacles = Obstacles(num_obstacles, (SCREEN_WIDTH,SCREEN_HEIGHT))
         self.list_obst = []
         self.generate_obstacles()
-        # state machines for each vehicle
+        # state machines for each Drone
         self.behaviors =[] 
         # Current simulations 
         self.swarm = []
         # npc target 
         self.npc = Npc_target()
         
-        self.create_swarm_uav(rate.in_num_swarm[0])
+        self.create_swarm_uav(rate.num_swarm[0])
 
     def generate_obstacles(self):
         # Generates obstacles
@@ -78,20 +74,21 @@ class Simulation(object):
         self.list_obst = self.obstacles.get_coordenates()
 
     def create_swarm_uav(self, num_swarm):
+        # TODO: Change to Cinara's code
         # Create N simultaneous Drones
-        for d in range(0, num_swarm):
+        for d in range(1, num_swarm+1):
             self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
-            #using Old vehicle: steering behavior
-            drone = Vehicle(SCREEN_WIDTH*d/num_swarm, 10, self.behaviors[-1], self.screenSimulation.screen)
+            #using Old Drone: steering behavior
+            drone = Drone(10, SCREEN_HEIGHT*d/(num_swarm + 1), self.behaviors[-1], self.screenSimulation.screen)
             #using potential fields
             self.swarm.append(drone)
 
-    def add_new_uav(self):
+    def add_new_uav(self, target):
         self.behaviors.append( FiniteStateMachine( SeekState() ) )
-         #using Old vehicle: steering behavior
-        drone = Vehicle(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behaviors[-1], self.screenSimulation.screen)
+         #using Old Drone: steering behavior
+        drone = Drone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behaviors[-1], self.screenSimulation.screen)
         #using potential fields
-        drone.set_target(pygame.math.Vector2(pygame.mouse.get_pos()[0],pygame.mouse.get_pos()[1]))
+        drone.set_target(target)
         self.append_uav(drone)
 
     def append_uav(self, drone):
@@ -99,8 +96,8 @@ class Simulation(object):
 
     def set_target(self, target):
         self.target_simulation = target
-        for _ in self.swarm:
-            _.set_target(target)
+        for drone in self.swarm:
+            drone.set_target(target)
 
     def run_simulation(self):
         if self.target_simulation: # draw target - npc
@@ -109,7 +106,7 @@ class Simulation(object):
         if self.start_watch == 0:
             self.start_watch = time.time()
 
-        self.rate.in_algorithms[self.rate.current_repetition].scan(self, self.list_obst)
+        self.rate.algorithm.scan(self, self.list_obst)
         
         for coordinate in self.list_obst: 
             pygame.draw.circle(self.screenSimulation.screen, RED, coordinate, radius=RADIUS_OBSTACLES//4, width=20)
@@ -117,9 +114,10 @@ class Simulation(object):
             pygame.draw.circle(self.screenSimulation.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
 
         self.time_executing += SAMPLE_TIME # count time of execution based on the sampling
-        print(self.time_executing)
+        img = self.screenSimulation.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
+        self.screenSimulation.screen.blit(img, (1490, 20))
 
-        if self.completed_simualtion() >= 0.8 and self.stop_watch == 0 or self.time_executing > TIME_MAX_SIMULATION:
+        if self.completed_simulation() >= 0.8 and self.stop_watch == 0 or self.time_executing > TIME_MAX_SIMULATION:
             self.stop_watch = time.time()
             
             if self.rate and self.rate.next_simulation():
@@ -129,13 +127,13 @@ class Simulation(object):
 
         return True
 
-    def completed_simualtion(self):
+    def completed_simulation(self):
         count_completed = 0
         if self.target_simulation:
-            for _ in self.swarm:
-                if _.reached_goal(self.target_simulation):
+            for drone in self.swarm:
+                if drone.reached_goal(self.target_simulation):
                     count_completed = count_completed + 1 
-        return count_completed/self.rate.in_num_swarm[self.rate.current_repetition]
+        return count_completed/self.rate.num_swarm[self.rate.current_repetition]
 
     def rest_simulation(self):
         # new obstacles
@@ -146,16 +144,16 @@ class Simulation(object):
             time = "Goal not reached"
         self.rate.set_out(time)
             
-        for _ in self.swarm:
-            _.set_target(None)
-            del _
+        for drone in self.swarm:
+            drone.set_target(None)
+            del drone
 
         self.swarm = []
         self.start_watch = 0
         self.stop_watch = 0
         self.target_simulation = None
-        self.create_swarm_uav(self.rate.in_num_swarm[self.rate.current_repetition])
+        self.create_swarm_uav(self.rate.num_swarm[self.rate.current_repetition])
         self.time_executing = 0 # Reset timer
         # set new random target for iteration
-        target = pygame.math.Vector2(uniform(100, SCREEN_WIDTH), uniform(100, SCREEN_HEIGHT))
+        target = pygame.math.Vector2(SCREEN_WIDTH, SCREEN_HEIGHT//2)
         self.set_target(target)
