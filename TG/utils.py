@@ -1,9 +1,8 @@
 import copy
-from numpy import clip 
 import pygame
 import random
 
-from math import exp 
+from math      import exp 
 from constants import *
 
 def normalFunction(omega, center, position):
@@ -105,7 +104,7 @@ class FlowField():
                 pygame.draw.rect(screen, (200, 200, 200), rect, 1)
 
 
-class Npc_target(pygame.sprite.Sprite):
+class NPC(pygame.sprite.Sprite):
     """
         Represents a simple visual animated npc 
         Can load sprites, rotate and update animation

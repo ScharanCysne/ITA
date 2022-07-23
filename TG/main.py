@@ -1,7 +1,7 @@
 import sys, pygame
 
-from scan import DefineTargetScan
-from constants import *
+from scan       import DefineTargetScan
+from constants  import *
 from simulation import Simulation, ScreenSimulation, RateSimulation
 
 screenSimulation = ScreenSimulation()
@@ -9,7 +9,7 @@ screenSimulation = ScreenSimulation()
 # defines initial target
 target = pygame.math.Vector2(SCREEN_WIDTH, SCREEN_HEIGHT//2)
 # simulator object
-simulation = Simulation(screenSimulation, RateSimulation(5, [10,20], DefineTargetScan()))
+simulation = Simulation(screenSimulation, RateSimulation(50, [10,20], DefineTargetScan()))
 
 run = True
 while run:
@@ -17,7 +17,8 @@ while run:
     screenSimulation.clock.tick(FREQUENCY)
     # Get Pygame Events 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT: sys.exit()
+        if event.type == pygame.QUIT: 
+            sys.exit()
         # Key 'd' pressed
         if event.type == pygame.KEYDOWN and event.key == pygame.K_d:
             for drone in simulation.swarm:

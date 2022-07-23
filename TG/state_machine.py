@@ -112,7 +112,7 @@ class SeekState(State):
         agent.arrive(self.target)
         self.time_executing +=1
         
-        if (self.target - agent.location).length() < 10 and self.time_executing > 300:
+        if (self.target - agent.location[0]) < 10 and self.time_executing > 300:
             self.finished = True
 
 class StayAtState(State):
@@ -200,7 +200,7 @@ class OvalState(State):
         pos = self.target - agent.get_position() 
         #print(f'distancia até target {pos.length()}')
         ang = atan2(pos.y,pos.x)
-        e = FORWARD_SPEED / RADIUS_TARGET
+        e = FORWARD_SPEED / THRESHOLD_TARGET
         if pi/2 - e  < ang < pi/2 + e  and self.sequence == 0 :
             #time.sleep(1)
             self.sequence = 1
@@ -214,7 +214,7 @@ class OvalState(State):
         if self.sequence == 1:
             agent.seek(self.target)
             if pos.length() < 5:
-                self.target = agent.get_position() + vec2(0,RADIUS_TARGET)
+                self.target = agent.get_position() + vec2(0,THRESHOLD_TARGET)
                 self.sequence = 2
                 
         # rotaciona em novo taget        
@@ -230,7 +230,7 @@ class OvalState(State):
                 agent.seek(self.target)
                 # chegou ao ponto, recomeça
                 if pos.length() < 5:
-                    self.target = agent.get_position() + vec2(0, -RADIUS_TARGET)
+                    self.target = agent.get_position() + vec2(0, -THRESHOLD_TARGET)
                     self.sequence = 0
                     self.finished = True
 
@@ -276,20 +276,20 @@ class Eight2State(State):
         ang = atan2(pos.y,pos.x)
         ang_corte = pi/2
         # step error
-        e = FORWARD_SPEED / RADIUS_TARGET
+        e = FORWARD_SPEED / THRESHOLD_TARGET
         if self.sequence == 0 :
             # inicia girando até 90 graus
             agent.seek_around(self.target)
             if ang_corte - e < ang < ang_corte + e:
                 self.sequence = 1
                 # way point 2
-                self.target = agent.get_position() + vec2(2*RADIUS_TARGET,2*RADIUS_TARGET)
+                self.target = agent.get_position() + vec2(2*THRESHOLD_TARGET,2*THRESHOLD_TARGET)
         
         # Primeira reta do X
         if self.sequence == 1:
             agent.seek(self.target)
             if pos.length() < 5:
-                self.target = agent.get_position() + vec2(0,-RADIUS_TARGET)
+                self.target = agent.get_position() + vec2(0,-THRESHOLD_TARGET)
                 self.sequence = 2
                 
         # faz meia volta no segundo target       
@@ -297,7 +297,7 @@ class Eight2State(State):
             agent.seek_around(self.target)
                 # se esta em -pi/2
             if  ang_corte - e < ang < ang_corte + e:
-                self.target = agent.get_position() + vec2(-2*RADIUS_TARGET,+2*RADIUS_TARGET)
+                self.target = agent.get_position() + vec2(-2*THRESHOLD_TARGET,+2*THRESHOLD_TARGET)
                 self.sequence = 3
 
         # vai até ang -pi/2 do target
@@ -305,7 +305,7 @@ class Eight2State(State):
                 agent.seek(self.target)
                 # chegou ao ponto, recomeça
                 if pos.length() < 5:
-                    self.target = agent.get_position() + vec2(0, -RADIUS_TARGET)
+                    self.target = agent.get_position() + vec2(0, -THRESHOLD_TARGET)
                     self.sequence = 0
                     self.finished +=1
 
@@ -431,14 +431,14 @@ class EightState(State):
         pos = self.target - agent.get_position() 
         self.theta = atan2(pos.y,pos.x)
         #print(f'angulo : {self.theta }')
-        e = FORWARD_SPEED / RADIUS_TARGET
+        e = FORWARD_SPEED / THRESHOLD_TARGET
         if   pi - e < self.theta < pi + e and self.c == 0: 
             self.c += 1
-            self.target += vec2(RADIUS_TARGET*2,0)
+            self.target += vec2(THRESHOLD_TARGET*2,0)
             print(f'volta') 
 
         if self.c == 1 and  -SAMPLE_TIME < self.theta < SAMPLE_TIME  :
-            self.target -= vec2(RADIUS_TARGET*2,0)
+            self.target -= vec2(THRESHOLD_TARGET*2,0)
             self.c = 0
 
         agent.seek_around(self.target)

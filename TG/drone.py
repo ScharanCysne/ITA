@@ -1,11 +1,10 @@
-import pygame as pg
-from utils import random_color, limit, constrain, derivativeBivariate
-from constants import *
-from math import cos, sin, atan2
-import random
 import copy 
+import random
+import pygame 
 
-vec2 = pg.math.Vector2
+from math      import cos, sin, atan2
+from utils     import random_color, limit, constrain, derivativeBivariate
+from constants import *
 
 class Drone(object):
 
@@ -21,12 +20,12 @@ class Drone(object):
         self.debug = False #  debug lines is Off
 
         # Variables used to move drone 
-        self.location = vec2(x,y) # Random position in screen
-        self.velocity = vec2(0.1,0) # Inicial speed
-        self.target = vec2(x,y)
-        self.acceleration = vec2(0,0)
+        self.location = pygame.math.Vector2(x,y) # Random position in screen
+        self.velocity = pygame.math.Vector2(0.1,0) # Inicial speed
+        self.target = SCREEN_WIDTH
+        self.acceleration = pygame.math.Vector2(0,0)
         self.radius = SIZE_DRONE # Drone Size
-        self.desired = vec2()
+        self.desired = pygame.math.Vector2()
 
         self.memory_location = [] # To draw track
         self.rotation = atan2(self.location.y, self.location.x) # inicital rotation
@@ -46,7 +45,7 @@ class Drone(object):
         self.count = 0
      
     def reached_goal(self, target):
-        return target and (target - self.location).length() <= RADIUS_TARGET 
+        return target - self.location[0] <= THRESHOLD_TARGET 
     
     def update(self):
         """
@@ -85,11 +84,7 @@ class Drone(object):
         """
             Seek Steering force Algorithm
         """
-        try:
-            self.desired  = (target - self.location).normalize()*self.max_speed
-        except: # if you try to normalize a null vector it will catch
-            self.desired  = (target - self.location)*self.max_speed
-        
+        self.desired  = ((target - self.location[0]) / SCREEN_WIDTH) * self.max_speed
         # Calculates steering force
         steer = self.desired  - self.velocity
         # Limit the magnitude of the steering force.
@@ -97,17 +92,17 @@ class Drone(object):
         # Applies steering force to drone
         self.applyForce(steer)
         # Draws current target being seeked 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        pygame.draw.circle(self.window, self.color_target , [target, SCREEN_HEIGHT//2],5, 0)
     
     def arrive_new(self, target):
         """
             Arrive using potential fields 
         """
         # Calculates vector desired 
-        velocity_attract = vec2(0,0)
-        velocity_repulsion= vec2(0,0)
+        velocity_attract = pygame.math.Vector2(0,0)
+        velocity_repulsion= pygame.math.Vector2(0,0)
 
-        velocity_attract = derivativeBivariate(.05,.05,target,self.location)
+        velocity_attract = derivativeBivariate(.05,.05,[target, SCREEN_HEIGHT//2],self.location)
 
         desired_velocity = (velocity_attract - velocity_repulsion) 
         error = (desired_velocity - self.velocity) / SAMPLE_TIME 
@@ -115,14 +110,14 @@ class Drone(object):
         accelerate = limit(error, self.max_force)
         self.applyForce(accelerate)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        pygame.draw.circle(self.window, self.color_target, [target, SCREEN_HEIGHT//2],5, 0)
 
     def arrive(self, target):
         """
             Arrive Steering Behavior
         """
         # Calculates vector desired 
-        self.desired = (target - self.location)
+        self.desired = pygame.math.Vector2([target - self.location[0], 0])
         # get the distance to the target
         d = self.desired.magnitude() 
 
@@ -131,11 +126,10 @@ class Drone(object):
         except: # If the magnitude of desired is zero it cant be normalized
             dist = copy.deepcopy(self.desired)
         
-        r = RADIUS_TARGET
         # Modulates the force
-        if d < r : # close to target it will reduce velocty till stops
+        if d < THRESHOLD_TARGET : # close to target it will reduce velocty till stops
             # interpolation
-            dist *= self.max_speed*(1 + 1/r*(d-r))
+            dist *= self.max_speed*(1 + 1/THRESHOLD_TARGET*(d-THRESHOLD_TARGET))
         else:
             dist *= self.max_speed
 
@@ -146,19 +140,19 @@ class Drone(object):
         # apply force to the Drone
         self.applyForce(steer)
         # Simulates Wind - random Noise
-        wind = vec2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
+        wind = pygame.math.Vector2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         self.applyForce(wind)
         # Draws current target as a point 
-        pg.draw.circle(self.window, self.color_target ,target ,5, 0)
+        pygame.draw.circle(self.window, self.color_target, [target, SCREEN_HEIGHT//2],5, 0)
 
-    def stay_at(self, center, r = RADIUS_TARGET):
+    def stay_at(self, center, r = THRESHOLD_TARGET):
         """
            Drone Behavior - it will orbit a given target (center)
         """
         posToCenter = center - self.location 
         #ok
         if self.debug == True:
-            pg.draw.line(self.window,BLACK, self.location ,center,1)
+            pygame.draw.line(self.window,BLACK, self.location ,center,1)
 
         # se o veiculo se encontra mais longue q o raio de rotaçao
         if posToCenter.length() > r :
@@ -167,11 +161,10 @@ class Drone(object):
         else: # se ele esta dentro do raio de rotaçao
             # reinicia forças
             centerToPerimeter = posToCenter.normalize()*(-1*r )
-            #ok
-            pg.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
+            pygame.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
             
             posToPerimeter = centerToPerimeter + posToCenter 
-            #pg.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
+            #pygame.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
 
             print(f'distancia até perimetro {posToPerimeter.length()}')
 
@@ -179,7 +172,7 @@ class Drone(object):
                 # theta is the angle of the vector center to perimeter
             theta = atan2(centerToPerimeter.y, centerToPerimeter.x)
             theta += self.angular_speed
-            new_target = vec2(0,0)
+            new_target = pygame.math.Vector2(0,0)
 
             # new target
             new_target.x += r  * cos(theta)
@@ -187,12 +180,12 @@ class Drone(object):
             new_target += center
 
             if self.debug == True:
-                pg.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
-                pg.draw.line(self.window,BLACK, self.location, new_target, 2 )
+                pygame.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
+                pygame.draw.line(self.window,BLACK, self.location, new_target, 2 )
             
             self.seek(new_target)
 
-    def seek_around(self, center, radius_target = RADIUS_TARGET):
+    def seek_around(self, center, radius_target = THRESHOLD_TARGET):
         """
            Drone Behavior - it will orbit a given target (center) with prevision 
 
@@ -208,12 +201,12 @@ class Drone(object):
         fut_pos += self.location
 
         if self.debug == True:
-            pg.draw.line(self.window,(0,255,50),self.location,fut_pos,5)
+            pygame.draw.line(self.window,(0,255,50),self.location,fut_pos,5)
         #print(f'center: {center}')
         posToCenter = center - fut_pos
         # line from drone to center
         if self.debug == True:
-            pg.draw.line(self.window,BLACK, self.location ,center,1)
+            pygame.draw.line(self.window,BLACK, self.location ,center,1)
 
         # se o veiculo se encontra mais longue q o raio de rotaçao
         if posToCenter.length() > radius_target:
@@ -224,26 +217,21 @@ class Drone(object):
             centerToPerimeter = posToCenter.normalize()*(-1*radius_target)
             #ok
             if self.debug == True:
-                pg.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
+                pygame.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
             
-            posToPerimeter = centerToPerimeter + posToCenter 
-            #pg.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
-
-            #print(f'distancia até perimetro {posToPerimeter.length()}')
-
             # new target is on the radius
                 # theta is the angle of the vector center to perimeter
             self.theta = atan2(centerToPerimeter.y, centerToPerimeter.x)
             self.theta += self.angular_speed
-            new_target = vec2(0,0)
+            new_target = pygame.math.Vector2(0,0)
 
             # new target
             new_target.x += radius_target * cos(self.theta)
             new_target.y += radius_target * sin(self.theta)
             new_target += center
             if self.debug == True:
-                pg.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
-                pg.draw.line(self.window,BLACK, self.location, new_target, 2 )
+                pygame.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
+                pygame.draw.line(self.window,BLACK, self.location, new_target, 2 )
             self.seek(new_target)
 
     def mission_accomplished(self):
@@ -281,7 +269,7 @@ class Drone(object):
         """
         # gets all positions of simultaneos drones
         aux = 0 
-        soma = vec2(0,0) # sums up all directions of close drones
+        soma = pygame.math.Vector2(0,0) # sums up all directions of close drones
         count = 0 # counts the number of drones that are close
         for p in all_positions:
         # compares current position to all the drones
@@ -313,17 +301,17 @@ class Drone(object):
 
         # draws track
         if len(self.memory_location) >= 2:
-            pg.draw.lines(self.window, self.color_target, False, self.memory_location, 1)
+            pygame.draw.lines(self.window, self.color_target, False, self.memory_location, 1)
         # Drawing drone's outer circle as a hitbox?
         if self.debug == True:
-            pg.draw.circle(self.window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
-            #pg.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
+            pygame.draw.circle(self.window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
+            #pygame.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
             # Draw Direction
             v = self.velocity.length()
-            pg.draw.line(self.window, self.color_target, self.location, self.location + self.velocity.normalize()*v*20 , 1)
+            pygame.draw.line(self.window, self.color_target, self.location, self.location + self.velocity.normalize()*v*20 , 1)
 
         # usar sprite para desenhar drone
-        pg.draw.circle(self.window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
+        pygame.draw.circle(self.window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
 
     def check_collision(self, positions_drones , pos_obstacles , index):
         """

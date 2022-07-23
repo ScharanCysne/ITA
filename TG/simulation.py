@@ -1,9 +1,9 @@
 import time, pygame
 
-from utils import Npc_target
-from drone import Drone
-from obstacle import Obstacles
-from constants import *
+from utils         import NPC
+from drone         import Drone
+from obstacle      import Obstacles
+from constants     import *
 from state_machine import FiniteStateMachine, SeekState
 
 class RateSimulation(object):
@@ -49,7 +49,7 @@ class ScreenSimulation(object):
 
 class Simulation(object):
     def __init__(self, screenSimulation, rate, num_obstacles=NUM_OBSTACLES):
-        self.target_simulation = None
+        self.target_simulation = SCREEN_WIDTH
         self.screenSimulation = screenSimulation
         self.start_watch = 0
         self.stop_watch = 0
@@ -64,7 +64,7 @@ class Simulation(object):
         # Current simulations 
         self.swarm = []
         # npc target 
-        self.npc = Npc_target()
+        self.npc = NPC()
         
         self.create_swarm_uav(rate.num_swarm[0])
 
@@ -101,7 +101,7 @@ class Simulation(object):
 
     def run_simulation(self):
         if self.target_simulation: # draw target - npc
-            pygame.draw.circle(self.screenSimulation.screen, (100, 100, 100), self.target_simulation, RADIUS_TARGET, 2)
+            pygame.draw.circle(self.screenSimulation.screen, (100, 100, 100), [self.target_simulation, SCREEN_HEIGHT//2], THRESHOLD_TARGET, 2)
 
         if self.start_watch == 0:
             self.start_watch = time.time()
@@ -151,7 +151,7 @@ class Simulation(object):
         self.swarm = []
         self.start_watch = 0
         self.stop_watch = 0
-        self.target_simulation = None
+        self.target_simulation = SCREEN_WIDTH
         self.create_swarm_uav(self.rate.num_swarm[self.rate.current_repetition])
         self.time_executing = 0 # Reset timer
         # set new random target for iteration

@@ -1,5 +1,5 @@
 import random
-import pygame as pg
+import pygame 
 
 class Obstacles(object):
     def __init__(self, num_of_obstacles, map_size):
@@ -13,7 +13,7 @@ class Obstacles(object):
         for _ in range(self.num_of_obstacles):
             pos_x = random.uniform(0, self.map_size[0])
             pos_y = random.uniform(0, self.map_size[1])
-            self.obst.append(pg.math.Vector2(pos_x, pos_y)) 
+            self.obst.append(pygame.math.Vector2(pos_x, pos_y)) 
                                   
     def get_coordenates(self):
         return self.obst
