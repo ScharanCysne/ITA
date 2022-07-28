@@ -1,12 +1,9 @@
-import random
-from random import choices
-from math import pi, atan2
-from constants import *
 import numpy as np
 import pygame 
-import time
 
-vec2 = pygame.math.Vector2
+from math      import pi, atan2
+from random    import choices
+from constants import *
 
 def get_random_state():
     """
@@ -76,7 +73,6 @@ class SeekState(State):
         # Todo: add initialization code
         self.state_name = 'SeekState'
         self.time_executing = 0 #Variavel para contagem do tempo de execução 
-        print('Seek')
         self.finished = False
 
     def check_transition(self, agent, state_machine):
@@ -103,16 +99,10 @@ class SeekState(State):
         #         state_machine.change_state(ScanState())  
              
     def execute(self, agent):
-        # logic to move drone to target
-        try:
-            self.target
-        except:
-            self.target = agent.get_position()
-
         agent.arrive(self.target)
         self.time_executing +=1
         
-        if (self.target - agent.location[0]) < 10 and self.time_executing > 300:
+        if (self.target - agent.location[0]) < THRESHOLD_TARGET and self.time_executing < 300:
             self.finished = True
 
 class StayAtState(State):
@@ -153,7 +143,7 @@ class StayAtState(State):
         try:
             self.target
         except:
-            self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2) 
+            self.target = pygame.math.Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2) 
 
         self.time_executing += 1
         # defines target 
@@ -168,7 +158,7 @@ class OvalState(State):
         self.state_name = 'Oval'
         self.theta = 0 #Variavel para contagem do angulo atual  
         print('OvalState')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = pygame.math.Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
         self.sequence = 0
         self.finished = False
 
@@ -204,7 +194,7 @@ class OvalState(State):
         if pi/2 - e  < ang < pi/2 + e  and self.sequence == 0 :
             #time.sleep(1)
             self.sequence = 1
-            self.target = agent.get_position() + vec2(300,0)
+            self.target = agent.get_position() + pygame.math.Vector2(300,0)
         # inicia girando até 90 graus
 
         if self.sequence == 0:
@@ -214,7 +204,7 @@ class OvalState(State):
         if self.sequence == 1:
             agent.seek(self.target)
             if pos.length() < 5:
-                self.target = agent.get_position() + vec2(0,THRESHOLD_TARGET)
+                self.target = agent.get_position() + pygame.math.Vector2(0,THRESHOLD_TARGET)
                 self.sequence = 2
                 
         # rotaciona em novo taget        
@@ -222,7 +212,7 @@ class OvalState(State):
             agent.seek_around(self.target)
                 # se esta em -pi/2
             if  -pi/2 - e  < ang < -pi/2 + e :
-                self.target = agent.get_position() + vec2(-300,0)
+                self.target = agent.get_position() + pygame.math.Vector2(-300,0)
                 self.sequence = 3
 
         # vai até ang -pi/2 do target
@@ -230,7 +220,7 @@ class OvalState(State):
                 agent.seek(self.target)
                 # chegou ao ponto, recomeça
                 if pos.length() < 5:
-                    self.target = agent.get_position() + vec2(0, -THRESHOLD_TARGET)
+                    self.target = agent.get_position() + pygame.math.Vector2(0, -THRESHOLD_TARGET)
                     self.sequence = 0
                     self.finished = True
 
@@ -243,7 +233,7 @@ class Eight2State(State):
         # Todo: add initialization code
         self.theta = 0 #Variavel para contagem do angulo atual  
         print('EightState2')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = pygame.math.Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
         self.sequence = 0
         self.finished = 0 
 
@@ -283,13 +273,13 @@ class Eight2State(State):
             if ang_corte - e < ang < ang_corte + e:
                 self.sequence = 1
                 # way point 2
-                self.target = agent.get_position() + vec2(2*THRESHOLD_TARGET,2*THRESHOLD_TARGET)
+                self.target = agent.get_position() + pygame.math.Vector2(2*THRESHOLD_TARGET,2*THRESHOLD_TARGET)
         
         # Primeira reta do X
         if self.sequence == 1:
             agent.seek(self.target)
             if pos.length() < 5:
-                self.target = agent.get_position() + vec2(0,-THRESHOLD_TARGET)
+                self.target = agent.get_position() + pygame.math.Vector2(0,-THRESHOLD_TARGET)
                 self.sequence = 2
                 
         # faz meia volta no segundo target       
@@ -297,7 +287,7 @@ class Eight2State(State):
             agent.seek_around(self.target)
                 # se esta em -pi/2
             if  ang_corte - e < ang < ang_corte + e:
-                self.target = agent.get_position() + vec2(-2*THRESHOLD_TARGET,+2*THRESHOLD_TARGET)
+                self.target = agent.get_position() + pygame.math.Vector2(-2*THRESHOLD_TARGET,+2*THRESHOLD_TARGET)
                 self.sequence = 3
 
         # vai até ang -pi/2 do target
@@ -305,7 +295,7 @@ class Eight2State(State):
                 agent.seek(self.target)
                 # chegou ao ponto, recomeça
                 if pos.length() < 5:
-                    self.target = agent.get_position() + vec2(0, -THRESHOLD_TARGET)
+                    self.target = agent.get_position() + pygame.math.Vector2(0, -THRESHOLD_TARGET)
                     self.sequence = 0
                     self.finished +=1
 
@@ -318,22 +308,24 @@ class ScanState(State):
         self.state_name = 'ScanState'
         self.theta = 0 #Variavel para contagem do angulo atual  
         print('ScanState')
-        self.target = vec2(300, 60)
+        self.target = pygame.math.Vector2(300, 60)
         self.sequence = 0
         self.finished = False
         self.radius = 50 
         d = 500 # distance for a straigth line
         # sequence of movements of behavior
-        self.waypoints = [ vec2(0,0), #origin 
-                           vec2(d, 0), 
-                           vec2(0,self.radius),
-                           vec2(-d,0), 
-                           vec2(0,self.radius),
-                           vec2(d, 0), 
-                           vec2(0, self.radius),
-                           vec2(-d, 0),
-                           vec2(0, self.radius),
-                           vec2(d,0)]
+        self.waypoints = [ 
+            pygame.math.Vector2(0,0), #origin 
+            pygame.math.Vector2(d, 0), 
+            pygame.math.Vector2(0,self.radius),
+            pygame.math.Vector2(-d,0), 
+            pygame.math.Vector2(0,self.radius),
+            pygame.math.Vector2(d, 0), 
+            pygame.math.Vector2(0, self.radius),
+            pygame.math.Vector2(-d, 0),
+            pygame.math.Vector2(0, self.radius),
+            pygame.math.Vector2(d,0)
+        ]
 
     def check_transition(self, agent, state_machine):
         # Todo: add logic to check and execute state transition
@@ -378,7 +370,7 @@ class ScanState(State):
             self.target = agent.get_position() + self.waypoints[self.sequence]
         else:
             self.sequence = 0  
-            self.target = vec2(300, 60)
+            self.target = pygame.math.Vector2(300, 60)
             self.finished = True
 
     def execute(self, agent):
@@ -415,7 +407,7 @@ class EightState(State):
         self.state_name = 'Eight'
         self.theta = 0 #Variavel para contagem do tempo de execução 
         print('Eight')
-        self.target = vec2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+        self.target = pygame.math.Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
         self.c = 0
 
     def check_transition(self, agent, state_machine):
@@ -434,11 +426,11 @@ class EightState(State):
         e = FORWARD_SPEED / THRESHOLD_TARGET
         if   pi - e < self.theta < pi + e and self.c == 0: 
             self.c += 1
-            self.target += vec2(THRESHOLD_TARGET*2,0)
+            self.target += pygame.math.Vector2(THRESHOLD_TARGET*2,0)
             print(f'volta') 
 
         if self.c == 1 and  -SAMPLE_TIME < self.theta < SAMPLE_TIME  :
-            self.target -= vec2(THRESHOLD_TARGET*2,0)
+            self.target -= pygame.math.Vector2(THRESHOLD_TARGET*2,0)
             self.c = 0
 
         agent.seek_around(self.target)

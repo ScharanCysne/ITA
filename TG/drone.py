@@ -91,8 +91,6 @@ class Drone(object):
         steer = limit(steer,self.max_force)
         # Applies steering force to drone
         self.applyForce(steer)
-        # Draws current target being seeked 
-        pygame.draw.circle(self.window, self.color_target , [target, SCREEN_HEIGHT//2],5, 0)
     
     def arrive_new(self, target):
         """
@@ -109,8 +107,6 @@ class Drone(object):
         
         accelerate = limit(error, self.max_force)
         self.applyForce(accelerate)
-        # Draws current target as a point 
-        pygame.draw.circle(self.window, self.color_target, [target, SCREEN_HEIGHT//2],5, 0)
 
     def arrive(self, target):
         """
@@ -142,8 +138,6 @@ class Drone(object):
         # Simulates Wind - random Noise
         wind = pygame.math.Vector2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         self.applyForce(wind)
-        # Draws current target as a point 
-        pygame.draw.circle(self.window, self.color_target, [target, SCREEN_HEIGHT//2],5, 0)
 
     def stay_at(self, center, r = THRESHOLD_TARGET):
         """
@@ -353,7 +347,3 @@ class Drone(object):
                     self.velocity *= -1
 
                 self.applyForce(-f_repulsion)
-
-    # Deleting (Calling destructor)
-    def __del__(self):
-        print('Drone Deleted')

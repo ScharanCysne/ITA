@@ -1,8 +1,8 @@
 from constants import *
 
-class DefineTargetScan:
+class TargetScan:
     def to_string(self) -> str:
-        return 'DefineTargetScan'
+        return 'TargetScan'
 
     def scan(self, simulation, list_obst):
         index = 0 # index is used to track current drone in the simulation list
@@ -13,7 +13,6 @@ class DefineTargetScan:
             drone.collision_avoidance(simulation.swarm, index)
             drone.check_collision(simulation.swarm,list_obst,index) 
             drone.update()
-            drone.draw(simulation.screenSimulation.screen) 
             # index to keep track of  drone in the list
             index += 1
             # writes drone id

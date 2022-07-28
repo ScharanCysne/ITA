@@ -16,7 +16,7 @@ class RateSimulation(object):
         # Number of drones in swarm for each iteration
         self.num_swarm = []
         for n in num_swarm:
-            self.num_swarm = self.num_swarm + [n] * (repetitions // len(num_swarm))
+            self.num_swarm = self.num_swarm + [n] * (self.repetitions // len(num_swarm))
 
         # Outputs of Rate
         self.out_time = []
@@ -53,6 +53,7 @@ class Simulation(object):
         self.screenSimulation = screenSimulation
         self.start_watch = 0
         self.stop_watch = 0
+        self.sim_time = self.screenSimulation.font24.render(f"Time: 0.00s", True, BLACK)
         self.rate = rate
         self.time_executing = 0 
         # variables for obstacles
@@ -100,42 +101,49 @@ class Simulation(object):
             drone.set_target(target)
 
     def run_simulation(self):
-        if self.target_simulation: # draw target - npc
-            pygame.draw.circle(self.screenSimulation.screen, (100, 100, 100), [self.target_simulation, SCREEN_HEIGHT//2], THRESHOLD_TARGET, 2)
-
         if self.start_watch == 0:
             self.start_watch = time.time()
 
         self.rate.algorithm.scan(self, self.list_obst)
-        
-        for coordinate in self.list_obst: 
-            pygame.draw.circle(self.screenSimulation.screen, RED, coordinate, radius=RADIUS_OBSTACLES//4, width=20)
-            pygame.draw.circle(self.screenSimulation.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES, width=1)
-            pygame.draw.circle(self.screenSimulation.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
-
         self.time_executing += SAMPLE_TIME # count time of execution based on the sampling
-        img = self.screenSimulation.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
-        self.screenSimulation.screen.blit(img, (1490, 20))
-
+        self.sim_time = self.screenSimulation.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
+        
         if self.completed_simulation() >= 0.8 and self.stop_watch == 0 or self.time_executing > TIME_MAX_SIMULATION:
             self.stop_watch = time.time()
             
             if self.rate and self.rate.next_simulation():
-                self.rest_simulation()
+                self.reset_simulation()
             else:
                 return False
+
+        # Print time of each iteration
+        for idx, t in enumerate(self.rate.out_time):
+            try:
+                img = self.screenSimulation.font20.render(f'{idx+1} - Scan Time: {t:.2f}', True, BLACK)
+            except:
+                img = self.screenSimulation.font20.render(f'{idx+1} - Scan Time: {t}', True, BLACK)
+            self.screenSimulation.screen.blit(img, (20, 20*(idx+2)))
 
         return True
 
     def completed_simulation(self):
         count_completed = 0
-        if self.target_simulation:
-            for drone in self.swarm:
-                if drone.reached_goal(self.target_simulation):
-                    count_completed = count_completed + 1 
+        for drone in self.swarm:
+            if drone.reached_goal(self.target_simulation):
+                count_completed = count_completed + 1 
         return count_completed/self.rate.num_swarm[self.rate.current_repetition]
 
-    def rest_simulation(self):
+    def draw_obstacles(self):
+        for coordinate in self.list_obst: 
+            pygame.draw.circle(self.screenSimulation.screen, RED, coordinate, radius=RADIUS_OBSTACLES//4, width=20)
+            pygame.draw.circle(self.screenSimulation.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES, width=1)
+            pygame.draw.circle(self.screenSimulation.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
+
+    def draw_drones(self):
+        for drone in self.swarm:
+            drone.draw(self.screenSimulation.screen) 
+
+    def reset_simulation(self):
         # new obstacles
         self.generate_obstacles()
 
@@ -149,11 +157,7 @@ class Simulation(object):
             del drone
 
         self.swarm = []
+        self.time_executing = 0 # Reset timer
         self.start_watch = 0
         self.stop_watch = 0
-        self.target_simulation = SCREEN_WIDTH
         self.create_swarm_uav(self.rate.num_swarm[self.rate.current_repetition])
-        self.time_executing = 0 # Reset timer
-        # set new random target for iteration
-        target = pygame.math.Vector2(SCREEN_WIDTH, SCREEN_HEIGHT//2)
-        self.set_target(target)

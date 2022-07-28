@@ -48,7 +48,7 @@ def random_color():
         :return: color picked
         :rtype : tuple
     """
-    rgbl = [random.uniform(0,255), 0, 0]
+    rgbl = [random.uniform(0,255), random.uniform(0,255), random.uniform(0,255)]
     random.shuffle(rgbl)
     return tuple(rgbl)
 
@@ -97,7 +97,6 @@ class FlowField():
         
     def draw(self, screen):
         blockSize = self.resolution #Set the size of the grid block
-        #print(self.cols,self.rows)
         for x in range(0, SCREEN_WIDTH, blockSize):
             for y in range(0, SCREEN_HEIGHT, blockSize):
                 rect = pygame.Rect(x, y, blockSize, blockSize)
