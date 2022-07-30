@@ -10,6 +10,7 @@ RESOLUTION = 30                 # of grid
 NUM_OBSTACLES = 20
 RADIUS_OBSTACLES = 40
 TIME_MAX_SIMULATION = 20        # Time to stop simulation in case the conditions are not completed
+OBSERVABLE_RADIUS = 100
 
 # Sample Time Parameters
 FREQUENCY   = 60.0              # simulation frequency
@@ -29,6 +30,7 @@ WHITE = (255,255,255)
 BLACK = (0,0,0)
 BLUE = (0,0,255)
 RED = (255,0,0)
+LIGHT_RED = (250,255,114)
 LIGHT_GRAY = (232, 232, 232)
 
 # keys

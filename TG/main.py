@@ -5,7 +5,19 @@ from utils      import FlowField
 from constants  import *
 from simulation import Simulation, ScreenSimulation, RateSimulation
 
-screenSimulation = ScreenSimulation()
+def draw():
+    screenSimulation.screen.fill(LIGHT_GRAY)                        # Background
+    screenSimulation.screen.blit(start_area, (0, 0))                # Starting area
+    screenSimulation.screen.blit(end_area, (SCREEN_WIDTH*0.9, 0))   # Ending area
+    flowField.draw(screenSimulation.screen)                         # Flow
+    simulation.draw_observable_area(4)
+    simulation.draw_obstacles()                                     # Obstacles
+    simulation.draw_connections()                                   # Connections
+    simulation.draw_drones()                                        # Drones
+    screenSimulation.screen.blit(simulation.sim_time, (1490, 20))   # Running Time
+    screenSimulation.screen.blit(title, (20, 20))                   # Title
+
+screenSimulation = ScreenSimulation(RESOLUTION)
 flowField = FlowField(RESOLUTION)
 
 # Title
@@ -48,15 +60,7 @@ while run:
             #    simulation.set_target(target)
 
     # Draw Components
-    screenSimulation.screen.fill(LIGHT_GRAY)                        # Background
-    screenSimulation.screen.blit(start_area, (0, 0))                # Starting area
-    screenSimulation.screen.blit(end_area, (SCREEN_WIDTH*0.9, 0))   # Ending area
-    flowField.draw(screenSimulation.screen)                         # Flow
-    simulation.draw_obstacles()                                     # Obstacles
-    simulation.draw_drones()                                        # Drones
-    screenSimulation.screen.blit(simulation.sim_time, (1490, 20))   # Running Time
-    screenSimulation.screen.blit(title, (20, 20))                   # Title
-
+    draw()
     # Run simulation  
     run = simulation.run_simulation()
 

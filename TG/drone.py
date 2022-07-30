@@ -292,10 +292,6 @@ class Drone(object):
         """
             Defines shape of Drone and draw it to screen
         """
-
-        # draws track
-        if len(self.memory_location) >= 2:
-            pygame.draw.lines(self.window, self.color_target, False, self.memory_location, 1)
         # Drawing drone's outer circle as a hitbox?
         if self.debug == True:
             pygame.draw.circle(self.window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
