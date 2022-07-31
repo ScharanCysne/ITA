@@ -294,11 +294,11 @@ class Drone(object):
         """
         # Drawing drone's outer circle as a hitbox?
         if self.debug == True:
-            pygame.draw.circle(self.window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
+            pygame.draw.circle(window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
             #pygame.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
             # Draw Direction
             v = self.velocity.length()
-            pygame.draw.line(self.window, self.color_target, self.location, self.location + self.velocity.normalize()*v*20 , 1)
+            pygame.draw.line(window, self.color_target, self.location, self.location + self.velocity.normalize()*v*20 , 1)
 
         # usar sprite para desenhar drone
         pygame.draw.circle(self.window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)

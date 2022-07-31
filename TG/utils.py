@@ -1,9 +1,13 @@
 import copy
+import numpy as np
 import pygame
 import random
 
 from math      import exp 
 from constants import *
+
+def distance(x0, y0, x1, y1):
+    return np.sqrt((x0 - x1)**2 + (y0 - y1)**2)
 
 def normalFunction(omega, center, position):
     f = exp( -omega*((position.x - center.x) + (position.y - center.y)))
