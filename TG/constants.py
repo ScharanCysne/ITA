@@ -13,7 +13,8 @@ TIME_MAX_SIMULATION = 20        # Time to stop simulation in case the conditions
 OBSERVABLE_RADIUS = 100
 
 # Sample Time Parameters
-FREQUENCY   = 60.0              # simulation frequency
+FREQUENCY = 60.0                # simulation frequency
+MAX_FREQUENCY = 1000.0          # simulation frequency to be used in intel oneAPI
 SAMPLE_TIME = 1.0 / FREQUENCY   # simulation sample time
 
 # Behavior Parameters
