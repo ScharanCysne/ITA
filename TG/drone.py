@@ -7,7 +7,7 @@ from utils     import limit, constrain, derivativeBivariate
 from constants import *
 
 class Drone(object):
-    def __init__(self, x, y, behavior):
+    def __init__(self, x, y, behavior, index):
         """
             idealized Drone representing a drone
 
@@ -16,16 +16,14 @@ class Drone(object):
         """
 
         # Variables used to move drone 
-        self.location = pygame.math.Vector2(x,y) # Random position in screen
-        self.velocity = pygame.math.Vector2(0.1,0) # Inicial speed
-        self.target = SCREEN_WIDTH
+        self.location = pygame.math.Vector2(x,y) 
+        self.velocity = pygame.math.Vector2(0,0) 
         self.acceleration = pygame.math.Vector2(0,0)
-        self.radius = SIZE_DRONE # Drone Size
+        self.target = SCREEN_WIDTH
+        self.radius = SIZE_DRONE            
         self.desired = pygame.math.Vector2()
-
-        self.memory_location = [] # To draw track
-        self.rotation = atan2(self.location.y, self.location.x) # inicital rotation
-
+        self.reached = False
+    
         # Arbitrary values
         self.max_speed = FORWARD_SPEED
         self.max_force = SEEK_FORCE
@@ -35,9 +33,11 @@ class Drone(object):
         self.behavior = behavior
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
-     
+        self.id = index
+
     def reached_goal(self, target):
-        return target - self.location[0] <= THRESHOLD_TARGET 
+        self.reached = target - self.location[0] <= THRESHOLD_TARGET
+        return self.reached
     
     def update(self):
         """
@@ -51,18 +51,10 @@ class Drone(object):
         self.velocity = limit(self.velocity, self.max_speed) 
         # updates position
         self.location += self.velocity 
-        # Prevents it from crazy spinning due to very low noise speeds
-        if self.velocity.length() > 0.8:
-            self.rotation = atan2(self.velocity.y,self.velocity.x)
         # Constrains position to limits of screen 
         self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
         self.acceleration *= 0
 
-        # Memory of positions to draw Track
-        self.memory_location.append((self.location.x,self.location.y))
-        # size of track 
-        if len(self.memory_location) > SIZE_TRACK:
-            self.memory_location.pop(0)
 
     def applyForce(self, force):
         """
@@ -178,20 +170,16 @@ class Drone(object):
     def get_position(self):
         return self.location
 
-    def set_target(self, target):
-        self.target = target
-    
     def get_target(self):
         try:
             return self.target
         except: 
             return None
 
-    def collision_avoidance(self, all_positions, index):
+    def collision_avoidance(self, all_positions):
         """
          This method avoids collisions with other drones
          During simulation it receives all the positions from all drones 
-         index: is the current id of drone being checked 
         """
         # gets all positions of simultaneos drones
         aux = 0 
@@ -202,7 +190,7 @@ class Drone(object):
         # aux != index -> avoids the auto-collision check
             d = (self.location - p.location).magnitude()
             separation_factor = 2.2
-            if ( (d > 0) and (d < AVOID_DISTANCE*separation_factor) and (aux != index) ) :
+            if ( (d > 0) and (d < AVOID_DISTANCE*separation_factor) and (aux != self.id) ) :
                 diff = (self.location - p.location).normalize()
                 diff = diff/d # proporcional to the distance. The closer the stronger needs to be
                 soma += diff
@@ -227,7 +215,7 @@ class Drone(object):
         # usar sprite para desenhar drone
         pygame.draw.circle(window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
 
-    def check_collision(self, positions_drones , pos_obstacles , index):
+    def check_collision(self, positions_drones, pos_obstacles):
         """
             Not working yet, it should detect obstacles and collision with other drones
         """
@@ -238,7 +226,7 @@ class Drone(object):
             d = (self.location - p.location).length()
             factor_distance = 2
             dist_avoid = AVOID_DISTANCE*factor_distance
-            if ( d < dist_avoid )  and (aux != index):
+            if ( d < dist_avoid )  and (aux != self.id):
                 #f = (self.velocity - self.velocity.normalize()*self.max_speed )/ SAMPLE_TIME
                 #f = limit(f,self.max_force)
                 #self.velocity *= d/(AVOID_DISTANCE*factor_distance)
@@ -314,7 +302,7 @@ class AgentState:
         pass
 
     def update_drones_impulse(self):
-            pass
+        pass
 
     def update_obstacles_impulse(self):
-            pass
+        pass

@@ -9,8 +9,8 @@ SIZE_TRACK = 100
 RESOLUTION = 30                 # of grid
 NUM_OBSTACLES = 20
 RADIUS_OBSTACLES = 40
-TIME_MAX_SIMULATION = 20        # Time to stop simulation in case the conditions are not completed
-OBSERVABLE_RADIUS = 100
+TIME_MAX_SIMULATION = 25        # Time to stop simulation in case the conditions are not completed
+OBSERVABLE_RADIUS = 150
 
 # Sample Time Parameters
 FREQUENCY = 60.0                # simulation frequency
