@@ -3,21 +3,17 @@ import random
 import pygame 
 
 from math      import cos, sin, atan2
-from utils     import random_color, limit, constrain, derivativeBivariate
+from utils     import limit, constrain, derivativeBivariate
 from constants import *
 
 class Drone(object):
-
-    def __init__(self, x, y, behavior, window):
+    def __init__(self, x, y, behavior):
         """
             idealized Drone representing a drone
 
             :param x and y: represents inicial target 
             :param behavior: State Machine 
-            :param window: pygame screen were it will be draw
         """
-
-        self.debug = False #  debug lines is Off
 
         # Variables used to move drone 
         self.location = pygame.math.Vector2(x,y) # Random position in screen
@@ -35,12 +31,8 @@ class Drone(object):
         self.max_force = SEEK_FORCE
         self.angular_speed = ANGULAR_SPEED
 
-        # Picks a random color for target, is used to differentiate visually during simulation
-        self.color_target = random_color() 
-
         # Variables related to State Machine
         self.behavior = behavior
-        self.window = window # tela em que esta acontecendo a simulaçao
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
      
@@ -53,7 +45,7 @@ class Drone(object):
             Updates bahavior tree
         """
         # updates behavior in machine state
-        self.behavior.update(self)
+        self.behavior.execute(self)
         # Updates velocity at every step and limits it to max_speed
         self.velocity += self.acceleration * 1 
         self.velocity = limit(self.velocity, self.max_speed) 
@@ -139,46 +131,6 @@ class Drone(object):
         wind = pygame.math.Vector2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
         self.applyForce(wind)
 
-    def stay_at(self, center, r = THRESHOLD_TARGET):
-        """
-           Drone Behavior - it will orbit a given target (center)
-        """
-        posToCenter = center - self.location 
-        #ok
-        if self.debug == True:
-            pygame.draw.line(self.window,BLACK, self.location ,center,1)
-
-        # se o veiculo se encontra mais longue q o raio de rotaçao
-        if posToCenter.length() > r :
-            self.seek(center)
-            #self.target =copy.deepcopy(center) 
-        else: # se ele esta dentro do raio de rotaçao
-            # reinicia forças
-            centerToPerimeter = posToCenter.normalize()*(-1*r )
-            pygame.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
-            
-            posToPerimeter = centerToPerimeter + posToCenter 
-            #pygame.draw.line(window,(255,0,0),center,center+posToPerimeter,5 )
-
-            print(f'distancia até perimetro {posToPerimeter.length()}')
-
-            # new target is on the radius
-                # theta is the angle of the vector center to perimeter
-            theta = atan2(centerToPerimeter.y, centerToPerimeter.x)
-            theta += self.angular_speed
-            new_target = pygame.math.Vector2(0,0)
-
-            # new target
-            new_target.x += r  * cos(theta)
-            new_target.y += r  * sin(theta)
-            new_target += center
-
-            if self.debug == True:
-                pygame.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
-                pygame.draw.line(self.window,BLACK, self.location, new_target, 2 )
-            
-            self.seek(new_target)
-
     def seek_around(self, center, radius_target = THRESHOLD_TARGET):
         """
            Drone Behavior - it will orbit a given target (center) with prevision 
@@ -194,14 +146,9 @@ class Drone(object):
         fut_pos = self.velocity.normalize()*(hop_ahead)
         fut_pos += self.location
 
-        if self.debug == True:
-            pygame.draw.line(self.window,(0,255,50),self.location,fut_pos,5)
         #print(f'center: {center}')
         posToCenter = center - fut_pos
-        # line from drone to center
-        if self.debug == True:
-            pygame.draw.line(self.window,BLACK, self.location ,center,1)
-
+        
         # se o veiculo se encontra mais longue q o raio de rotaçao
         if posToCenter.length() > radius_target:
             self.seek(center)
@@ -209,12 +156,9 @@ class Drone(object):
         else: # se ele esta dentro do raio de rotaçao
             # reinicia forças
             centerToPerimeter = posToCenter.normalize()*(-1*radius_target)
-            #ok
-            if self.debug == True:
-                pygame.draw.line(self.window,(0,0,255),center,center+centerToPerimeter,5 )
             
             # new target is on the radius
-                # theta is the angle of the vector center to perimeter
+            # theta is the angle of the vector center to perimeter
             self.theta = atan2(centerToPerimeter.y, centerToPerimeter.x)
             self.theta += self.angular_speed
             new_target = pygame.math.Vector2(0,0)
@@ -223,9 +167,6 @@ class Drone(object):
             new_target.x += radius_target * cos(self.theta)
             new_target.y += radius_target * sin(self.theta)
             new_target += center
-            if self.debug == True:
-                pygame.draw.line(self.window,(0,255,0), center,  new_target ,5)# verde é o target
-                pygame.draw.line(self.window,BLACK, self.location, new_target, 2 )
             self.seek(new_target)
 
     def mission_accomplished(self):
@@ -245,15 +186,6 @@ class Drone(object):
             return self.target
         except: 
             return None
-
-    def set_debug(self):
-        """
-        Method to view debug lines . Assists the developer.
-        """
-        self.debug = not self.debug
-
-    def get_debug(self):
-        return str(self.debug)
 
     def collision_avoidance(self, all_positions, index):
         """
@@ -292,16 +224,8 @@ class Drone(object):
         """
             Defines shape of Drone and draw it to screen
         """
-        # Drawing drone's outer circle as a hitbox?
-        if self.debug == True:
-            pygame.draw.circle(window, (100, 100, 100), self.location, AVOID_DISTANCE, 1)
-            #pygame.draw.line(self.window, (100, 100, 100), self.location, self.location+self.desired , 1)
-            # Draw Direction
-            v = self.velocity.length()
-            pygame.draw.line(window, self.color_target, self.location, self.location + self.velocity.normalize()*v*20 , 1)
-
         # usar sprite para desenhar drone
-        pygame.draw.circle(self.window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
+        pygame.draw.circle(window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
 
     def check_collision(self, positions_drones , pos_obstacles , index):
         """
@@ -343,3 +267,54 @@ class Drone(object):
                     self.velocity *= -1
 
                 self.applyForce(-f_repulsion)
+
+class AgentState:
+    def __init__(self, x, y, local_robustness, local_connectivity, drones_impulse, obstacles_impulse):
+        self._x = x
+        self._y = y
+        self._local_robustness = local_robustness
+        self._local_connectivity = local_connectivity
+        self._drones_impulse = drones_impulse
+        self._obstacles_impulse = obstacles_impulse
+
+    def get_state(self):
+        state = {
+            "x": self._x, 
+            "y": self._y, 
+            "local_robustness": self._local_robustness, 
+            "local_connectivity": self._local_connectivity, 
+            "drones_impulse": self._drones_impulse, 
+            "obstacles_impulse": self._obstacles_impulse 
+        }
+        return state
+
+    def get_position(self):
+        return (self._x, self._y)
+
+    def get_robustness(self):
+        return self._local_robustness
+
+    def get_connectivity(self):
+        return self._local_connectivity
+
+    def get_drones_impulse(self):
+        return self._drones_impulse
+
+    def get_obstacles_impulse(self):
+        return self._obstacles_impulse
+
+    def update_position(self, x, y):
+        self._x = x
+        self._y = y 
+
+    def update_robustness(self):
+        pass
+
+    def update_connectivity(self):
+        pass
+
+    def update_drones_impulse(self):
+            pass
+
+    def update_obstacles_impulse(self):
+            pass

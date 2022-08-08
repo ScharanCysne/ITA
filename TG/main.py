@@ -1,17 +1,26 @@
 import sys, pygame
 
-from scan       import TargetScan
 from constants  import *
 from simulation import Simulation, ScreenSimulation, RateSimulation
+
+def pause(paused):
+    while paused:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                paused = not paused
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE): 
+                sys.exit()
+    return paused
 
 # Create screen
 screenSimulation = ScreenSimulation(RESOLUTION)
 # defines initial target
 target = pygame.math.Vector2(SCREEN_WIDTH, SCREEN_HEIGHT//2)
 # simulator object
-simulation = Simulation(screenSimulation, RateSimulation(5, [10,20,30], TargetScan()), 10)
+simulation = Simulation(screenSimulation, RateSimulation(5, [10,20,30]), 10)
 
 run = True
+paused = False
 while run:
     # Draws at every dt
     screenSimulation.clock.tick(FREQUENCY)
@@ -34,6 +43,9 @@ while run:
             # left button - New Target
             #if pygame.mouse.get_pressed()[MOUSE_LEFT] == True:
             #    simulation.set_target(target)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            paused = not paused
+            paused = pause(paused)
 
     # Run simulation  
     run = simulation.run_simulation()

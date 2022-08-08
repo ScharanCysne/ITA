@@ -1,16 +1,15 @@
 import time, pygame, numpy as np
 
 from state         import State
-from utils         import NPC, FlowField, distance
+from utils         import FlowField, distance
 from drone         import Drone
 from obstacle      import Obstacles
 from constants     import *
-from state_machine import FiniteStateMachine, SeekState
+from behavior      import Behavior
 
 class RateSimulation(object):
-    def __init__(self, repetitions, num_swarm, algorithm):
+    def __init__(self, repetitions, num_swarm):
         self.current_repetition = 0
-        self.algorithm = algorithm
         
         # Number of repetitions in total
         self.repetitions = repetitions * len(num_swarm)
@@ -35,7 +34,7 @@ class RateSimulation(object):
             return True
 
     def print_simulation(self):
-        print(f'{self.current_repetition+1} - num_swarm: {self.num_swarm[self.current_repetition]}, Algorithm: {self.algorithm.to_string()}')
+        print(f'{self.current_repetition+1} - num_swarm: {self.num_swarm[self.current_repetition]}')
 
 
 class ScreenSimulation(object):
@@ -69,7 +68,7 @@ class ScreenSimulation(object):
         # Ending area
         self.screen.blit(self.end_area, (SCREEN_WIDTH*0.9, 0))   
         # Flow Chart
-        self.flow.draw(self.screen)                              
+        #self.flow.draw(self.screen)                              
         # Drone field of vision
         self.draw_observable_area(swarm, 4, state, swarm_size)       
         # Obstacles
@@ -87,7 +86,7 @@ class ScreenSimulation(object):
         for coordinate in obstacles: 
             pygame.draw.circle(self.screen, RED, coordinate, radius=RADIUS_OBSTACLES//4, width=20)
             pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES, width=1)
-            pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
+            #pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
 
     def draw_connections(self, swarm, swarm_size, state):
         for i in range(swarm_size):
@@ -105,15 +104,12 @@ class ScreenSimulation(object):
             # writes drone id
             img = self.font20.render(f'Drone {i}', True, BLACK)
             self.screen.blit(img, drone.get_position() + (0,20))
-            # writes drone current behavior
-            img = self.font20.render(drone.behavior.get_current_state(), True, BLUE)
-            self.screen.blit(img, drone.get_position()+(0,35))
             # writes drone current position in column and row
             p = drone.get_position()
             col = p.x // RESOLUTION + 1
             row = p.y // RESOLUTION + 1
             img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
-            self.screen.blit(img, drone.get_position()+(0,50))
+            self.screen.blit(img, drone.get_position()+(0,35))
 
     def draw_observable_area(self, swarm, drone, state, swarm_size):
         paintable = set()
@@ -125,11 +121,16 @@ class ScreenSimulation(object):
         for i in range(len(reachable_hops)):
             if state.adjacencyMatrix[reachable_hops[i]][i]:
                 paintable.add(i)
+        paintable.add(drone)
 
         for drone in paintable:
             self.paint_observable_area(swarm, drone)        
 
     def paint_observable_area(self, swarm, drone):
+        pos = swarm[drone].get_position()
+        pygame.draw.circle(self.screen, LIGHT_YELLOW, pos, radius=OBSERVABLE_RADIUS)
+                
+        """
         blockSize = self.resolution    # Set the size of the grid block
         pos_x, pos_y = swarm[drone].get_position()
         
@@ -147,7 +148,7 @@ class ScreenSimulation(object):
                     rect = pygame.Rect(x, y, blockSize, blockSize)
                     pygame.draw.rect(self.screen, LIGHT_RED, rect)
                     pygame.draw.rect(self.screen, LIGHT_GRAY, rect, 1)
-
+        """
 
 class Simulation(object):
     def __init__(self, screenSimulation, rate, num_swarm=NUM_DRONES, num_obstacles=NUM_OBSTACLES):
@@ -165,15 +166,14 @@ class Simulation(object):
         self.generate_obstacles()
         
         # state machines for each Drone
-        self.behaviors =[] 
+        self.behavior = Behavior(self.target_simulation) 
         
         # Current simulations 
         self.num_swarm = num_swarm
         self.swarm = []
         self.create_swarm()
         
-        # npc target 
-        self.npc = NPC()
+        # Simulation State 
         self.state = State(num_swarm)
 
     def generate_obstacles(self):
@@ -185,17 +185,11 @@ class Simulation(object):
         # TODO: Change to Cinara's code
         # Create N simultaneous Drones
         for d in range(1, self.num_swarm+1):
-            self.behaviors.append( FiniteStateMachine( SeekState() ) ) # Inicial state
-            #using Old Drone: steering behavior
-            drone = Drone(10, SCREEN_HEIGHT*d/(self.num_swarm + 1), self.behaviors[-1], self.screenSimulation.screen)
-            #using potential fields
+            drone = Drone(10, SCREEN_HEIGHT*d/(self.num_swarm + 1), self.behavior)
             self.swarm.append(drone)
 
     def add_new_uav(self, target):
-        self.behaviors.append( FiniteStateMachine( SeekState() ) )
-         #using Old Drone: steering behavior
-        drone = Drone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behaviors[-1], self.screenSimulation.screen)
-        #using potential fields
+        drone = Drone(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, self.behavior)
         drone.set_target(target)
         self.append_uav(drone)
 
@@ -211,7 +205,7 @@ class Simulation(object):
         if self.start_watch == 0:
             self.start_watch = time.time()
 
-        self.rate.algorithm.scan(self, self.list_obst)
+        self.state.scan(self, self.list_obst)
         self.time_executing += SAMPLE_TIME # count time of execution based on the sampling
         self.sim_time = self.screenSimulation.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
         self.state.updateMatrix(self.swarm)

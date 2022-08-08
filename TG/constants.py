@@ -30,9 +30,11 @@ AVOID_DISTANCE = 30             # distance to avoid collision
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 BLUE = (0,0,255)
+GREEN = (0,255,0)
 RED = (255,0,0)
 LIGHT_RED = (250,255,114)
 LIGHT_GRAY = (232, 232, 232)
+LIGHT_YELLOW = (255,255,102)
 
 # keys
 MOUSE_LEFT = 0
