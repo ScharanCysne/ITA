@@ -11,6 +11,7 @@ class Interface(object):
         self.font24 = pygame.font.SysFont(None, 24)
         self.screen = pygame.display.set_mode(self.size)
         self.clock = pygame.time.Clock()
+        self.time_executing = 0
 
         # Title
         self.title = self.font24.render('Deep Reinforcement Learning for Drones in Coverage Missions', True, BLACK)
@@ -24,8 +25,14 @@ class Interface(object):
         self.end_area = pygame.Surface((SCREEN_WIDTH*0.1, SCREEN_HEIGHT))
         self.end_area.set_alpha(50)
         pygame.draw.rect(self.end_area, BLUE, self.end_area.get_rect(), 1)
+        # Simulation Time
+        self.sim_time = self.font24.render(f"Time: 0.00s", True, BLACK)
 
-    def update_screen(self, swarm=[], obstacles=[], state=None, simulation_time=0, swarm_size=0):
+    def draw(self, swarm, obstacles, env_state, num_swarm, out_time):
+        self.time_executing += SAMPLE_TIME # count time of execution based on the sampling
+        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time)
+
+    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[]):
         # Background
         self.screen.fill(LIGHT_GRAY)                             
         # Starting area
@@ -35,17 +42,22 @@ class Interface(object):
         # Flow Chart
         #self.flow.draw(self.screen)                              
         # Drone field of vision
-        self.draw_observable_area(swarm, 4, state, swarm_size)       
+        self.draw_observable_area(swarm, 4, state, num_agents)       
         # Obstacles
         self.draw_obstacles(obstacles)                           
         # Connections
-        self.draw_connections(swarm, swarm_size, state)          
+        self.draw_connections(swarm, num_agents, state)          
         # Drones
         self.draw_drones(swarm)                                  
         # Running Time
-        self.screen.blit(simulation_time, (1490, 20))            
+        self.sim_time = self.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
+        self.screen.blit(self.sim_time, (1490, 20))   
         # Title
-        self.screen.blit(self.title, (20, 20))                   
+        self.screen.blit(self.title, (20, 20))
+        # Print time of each iteration
+        for idx, t in enumerate(out_time):
+            img = self.font20.render(f'{idx+1} - Scan Time: {t:.2f}', True, BLACK)
+            self.screen.blit(img, (20, 20*(idx+2)))
         # Flip screen
         pygame.display.flip()
         
@@ -55,9 +67,9 @@ class Interface(object):
             pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES, width=1)
             #pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
 
-    def draw_connections(self, swarm, swarm_size, state):
-        for i in range(swarm_size):
-            for j in range(i+1, swarm_size):
+    def draw_connections(self, swarm, num_agents, state):
+        for i in range(num_agents):
+            for j in range(i+1, num_agents):
                 if state.adjacencyMatrix[i][j]:
                     pos_i = swarm[i].get_position()
                     pos_j = swarm[j].get_position()
@@ -77,16 +89,17 @@ class Interface(object):
             img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
             self.screen.blit(img, drone.get_position()+(0,35))
 
-    def draw_observable_area(self, swarm, drone, state, swarm_size):
+    def draw_observable_area(self, swarm, drone, state, num_agents):
         paintable = set()
-        reachable_hops = list()
-        for i in range(swarm_size):
+        hops = list()
+        for i in range(num_agents):
             if state.adjacencyMatrix[drone][i]:
-                reachable_hops.append(i)
+                hops.append(i)
                 paintable.add(i)
-        for i in range(len(reachable_hops)):
-            if state.adjacencyMatrix[reachable_hops[i]][i]:
-                paintable.add(i)
+        for neighbor in hops:
+            for i in range(num_agents):
+                if state.adjacencyMatrix[neighbor][i]:
+                    paintable.add(i)
         paintable.add(drone)
 
         for drone in paintable:
@@ -115,31 +128,3 @@ class Interface(object):
                     pygame.draw.rect(self.screen, LIGHT_RED, rect)
                     pygame.draw.rect(self.screen, LIGHT_GRAY, rect, 1)
         """
-
-
-class Grader(object):
-    def __init__(self, repetitions, num_swarm):
-        self.current_repetition = 0
-        # Number of repetitions in total
-        self.repetitions = repetitions
-        # Number of drones in swarm for each iteration
-        self.num_swarm = []
-        for n in num_swarm:
-            self.num_swarm = self.num_swarm + [n]*repetitions
-        # Outputs of Rate
-        self.out_time = []
-        self.print_simulation()
-
-    def set_out(self, out_time):
-        self.out_time.append(out_time)
-
-    def next_simulation(self):
-        if self.repetitions - 1 == self.current_repetition:
-            return False
-        else:
-            self.current_repetition = self.current_repetition + 1
-            self.print_simulation()
-            return True
-
-    def print_simulation(self):
-        print(f'{self.current_repetition+1} - num_swarm: {self.num_swarm[self.current_repetition]}')

@@ -9,6 +9,11 @@ from constants import *
 def distance(x0, y0, x1, y1):
     return np.sqrt((x0 - x1)**2 + (y0 - y1)**2)
 
+def distance(drone_0, drone_1):
+    pos_x_0, pos_y_0 = drone_0.get_position()
+    pos_x_1, pos_y_1 = drone_1.get_position()
+    return np.sqrt((pos_x_0 - pos_x_1)**2 + (pos_y_0 - pos_y_1)**2)
+
 def normalFunction(omega, center, position):
     f = exp( -omega*((position.x - center.x) + (position.y - center.y)))
     return f
@@ -33,7 +38,7 @@ def derivativeBivariate(alpha, beta, center, position):
         position: (x,y)
         center of the function: (xc,yc)
         control variables: Alpha and Beta will control the stringthof the vectors in x and y directions
-        return: point in the bivariate function
+        return: point in the derivative of the bivariate function
     '''
     f = bivariateFunction(alpha,beta,center,position)
     dx = f * (-2*alpha*(position.x-center.x))
@@ -44,17 +49,6 @@ def constrain_ang(ang, min_angle, max_angle):
     ang = min(ang, max_angle)
     ang = max(ang, min_angle)
     return ang
-
-def random_color():
-    """"
-        Picks a random color R,G or B
-
-        :return: color picked
-        :rtype : tuple
-    """
-    rgbl = [random.uniform(0,255), random.uniform(0,255), random.uniform(0,255)]
-    random.shuffle(rgbl)
-    return tuple(rgbl)
 
 def limit(v2, max):
     """
@@ -72,7 +66,7 @@ def limit(v2, max):
         v.scale_to_length(max)
     return v
 
-def constrain(v2,w,h):
+def constrain(v2, w, h):
     """
         Constrains movement of drone inside the canvas
 

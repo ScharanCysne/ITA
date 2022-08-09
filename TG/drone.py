@@ -1,20 +1,16 @@
 import copy 
-import random
 import pygame 
 
-from math      import cos, sin, atan2
 from utils     import limit, constrain, derivativeBivariate
 from constants import *
 
 class Drone(object):
-    def __init__(self, x, y, behavior, index):
+    def __init__(self, x, y, index):
         """
             idealized Drone representing a drone
 
             :param x and y: represents inicial target 
-            :param behavior: State Machine 
         """
-
         # Variables used to move drone 
         self.location = pygame.math.Vector2(x,y) 
         self.velocity = pygame.math.Vector2(0,0) 
@@ -30,22 +26,30 @@ class Drone(object):
         self.angular_speed = ANGULAR_SPEED
 
         # Variables related to State Machine
-        self.behavior = behavior
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
         self.id = index
+        self.time_executing = 0  
+        self.finished = False
 
     def reached_goal(self, target):
         self.reached = target - self.location[0] <= THRESHOLD_TARGET
         return self.reached
     
+    def execute(self):
+        self.arrive(self.target)
+        self.time_executing +=1
+        
+        if (self.target - self.location[0]) < THRESHOLD_TARGET and self.time_executing < 300:
+            self.finished = True
+
     def update(self):
         """
             Standart Euler integration
             Updates bahavior tree
         """
         # updates behavior in machine state
-        self.behavior.execute(self)
+        self.execute()
         # Updates velocity at every step and limits it to max_speed
         self.velocity += self.acceleration * 1 
         self.velocity = limit(self.velocity, self.max_speed) 
@@ -54,7 +58,6 @@ class Drone(object):
         # Constrains position to limits of screen 
         self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
         self.acceleration *= 0
-
 
     def applyForce(self, force):
         """
@@ -119,62 +122,12 @@ class Drone(object):
         steer = limit(steer, self.max_force)
         # apply force to the Drone
         self.applyForce(steer)
-        # Simulates Wind - random Noise
-        wind = pygame.math.Vector2(random.uniform(-0.15,0.15) , random.uniform(-0.15,0.15)  )
-        self.applyForce(wind)
-
-    def seek_around(self, center, radius_target = THRESHOLD_TARGET):
-        """
-           Drone Behavior - it will orbit a given target (center) with prevision 
-
-           :param center: position of target to  orbite
-           :param radius_target: distance till center, default = RADIUS_TARGET from constants
-        """
-        # Calculating the max speed
-        self.angular_speed = FORWARD_SPEED / radius_target
-
-        # future positiom
-        hop_ahead = HOP_AHEAD #o quanto se ve a frente
-        fut_pos = self.velocity.normalize()*(hop_ahead)
-        fut_pos += self.location
-
-        #print(f'center: {center}')
-        posToCenter = center - fut_pos
-        
-        # se o veiculo se encontra mais longue q o raio de rotaçao
-        if posToCenter.length() > radius_target:
-            self.seek(center)
-            #self.target =copy.deepcopy(center) 
-        else: # se ele esta dentro do raio de rotaçao
-            # reinicia forças
-            centerToPerimeter = posToCenter.normalize()*(-1*radius_target)
-            
-            # new target is on the radius
-            # theta is the angle of the vector center to perimeter
-            self.theta = atan2(centerToPerimeter.y, centerToPerimeter.x)
-            self.theta += self.angular_speed
-            new_target = pygame.math.Vector2(0,0)
-
-            # new target
-            new_target.x += radius_target * cos(self.theta)
-            new_target.y += radius_target * sin(self.theta)
-            new_target += center
-            self.seek(new_target)
-
-    def mission_accomplished(self):
-        if self.target :
-            return self.location.x == self.target.x and self.location.y == self.target.y
-        else:    
-            return False
 
     def get_position(self):
         return self.location
 
     def get_target(self):
-        try:
-            return self.target
-        except: 
-            return None
+        return self.target
 
     def collision_avoidance(self, all_positions):
         """
@@ -203,12 +156,9 @@ class Drone(object):
             media *= self.max_speed
             steer = (media - self.velocity)
             steer = limit(steer,self.max_force)
-            #----
-            #----
             self.applyForce(steer)
                   
     def draw(self, window):
-
         """
             Defines shape of Drone and draw it to screen
         """

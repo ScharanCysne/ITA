@@ -7,7 +7,7 @@ from simulation import Simulation
 # Create interface screen
 interface = Interface(RESOLUTION)
 # simulator object
-simulation = Simulation(interface, 10)
+simulation = Simulation(10)
 
 run = True
 while run:
@@ -33,6 +33,7 @@ while run:
     # Run simulation  
     run = simulation.run_simulation()
     # Draw Components
-    simulation.draw()
+    swarm, obstacles, env_state, num_swarm, out_time = simulation.get_status()
+    interface.draw(swarm, obstacles, env_state, num_swarm, out_time)
     if not run:
         pygame.time.wait(5000) 

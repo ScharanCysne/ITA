@@ -1,24 +1,42 @@
+import random
+import pygame 
 import numpy as np
 
-from constants import *
+from utils     import distance
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, OBSERVABLE_RADIUS
 
-def distance(drone_0, drone_1):
-    pos_x_0, pos_y_0 = drone_0.get_position()
-    pos_x_1, pos_y_1 = drone_1.get_position()
-    return np.sqrt((pos_x_0 - pos_x_1)**2 + (pos_y_0 - pos_y_1)**2)
-
-class State:
-    def __init__(self, n) -> None:
-        self.n = n
-        self.adjacencyMatrix = np.zeros((n,n))
-        self.degreeMatrix = np.zeros((n,n))
-        self.laplacianMatrix = np.zeros((n,n))
+class Environment(object):
+    def __init__(self, num_obstacles, num_agents):
+        super().__init__()
+        # Environment constraints
+        self.width = SCREEN_WIDTH
+        self.height = SCREEN_HEIGHT
+        # Environment variables
+        self.num_obstacles = num_obstacles
+        self.num_agents = num_agents
+        # Network status
+        self.adjacencyMatrix = np.zeros((num_agents,num_agents))
+        self.degreeMatrix = np.zeros((num_agents,num_agents))
+        self.laplacianMatrix = np.zeros((num_agents,num_agents))
         self.connectivity = 0
+        # Global state
+        self.network_connectivity = 0
+        self.network_robustness = 0
+
+    def generate_obstacles(self):
+        self.obstacles = []
+        for _ in range(self.num_obstacles):
+            pos_x = random.uniform(SCREEN_WIDTH*0.1, SCREEN_WIDTH*0.9)
+            pos_y = random.uniform(0, SCREEN_HEIGHT)
+            self.obstacles.append(pygame.math.Vector2(pos_x, pos_y)) 
+                                  
+    def get_obstacles(self):
+        return self.obstacles
 
     def isConnected(self, i, j):
         return self.adjacencyMatrix[i][j]
 
-    def updateMatrix(self, swarm):
+    def update(self, swarm):
         number_drones = len(swarm)
         for i in range(number_drones):
             for j in range(i+1, number_drones):
