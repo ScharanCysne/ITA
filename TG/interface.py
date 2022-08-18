@@ -56,7 +56,10 @@ class Interface(object):
         self.screen.blit(self.title, (20, 20))
         # Print time of each iteration
         for idx, t in enumerate(out_time):
-            img = self.font20.render(f'{idx+1} - Scan Time: {t:.2f}', True, BLACK)
+            try:
+                img = self.font20.render(f'{idx+1} - Scan Time: {t:.2f}', True, BLACK)
+            except:
+                img = self.font20.render(f'{idx+1} - Scan Time: {t}', True, BLACK)
             self.screen.blit(img, (20, 20*(idx+2)))
         # Flip screen
         pygame.display.flip()
