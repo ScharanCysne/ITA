@@ -16,8 +16,8 @@ class CoverageMissionEnv(ParallelEnv):
         - Position [x,y]
         - Vulnerability level of a node v regarding failures: P_\theta(v)
         - Local estimate of algebraic connectivity given a node v: \lambda_v
-        - Resulting potential field due to obstacles in agent's position: [|F_o|, \theta_o]
-        - Resulting potential field due to other drones in agent's position: [|F_d|, \theta_d]
+        - Resulting potential field due to obstacles in agent's position: [F_ox, F_oy]
+        - Resulting potential field due to other drones in agent's position: [F_dx, F_dy]
 
         Total number of states: 8
     """
@@ -52,15 +52,15 @@ class CoverageMissionEnv(ParallelEnv):
         # Environment variables
         self.num_obstacles = num_obstacles
         self.env_state = State(num_agents)
-        # Initialize agents and obstacles positions
-        self.generate_agents()
-        self.generate_obstacles()
+        
 
     def observation_space(self, agent):
         return self.observation_spaces[agent]
 
+
     def action_space(self, agent):
         return self.action_spaces[agent]
+
 
     def step(self, actions):
         """
@@ -75,9 +75,12 @@ class CoverageMissionEnv(ParallelEnv):
             self.agents = []
             return {}, {}, {}, {}
         
+
+
         return {}, {}, {}, {}
 
         #return states, rewards, done, info
+
 
     def reset(self, seed=None, return_info=False, options=None):
         """
@@ -94,7 +97,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.generate_agents()
         self.generate_obstacles()
         
-        observations = {agent: None for agent in self.possible_agents}
+        observations = self.env_state.get_global_state(self.drones)
         return observations  
 
     def render(self, mode='human'):
@@ -119,10 +122,11 @@ class CoverageMissionEnv(ParallelEnv):
         pass
 
     def generate_agents(self):
-        mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/position.mat')
-        initial_positions = mat["position"]
         self.agents = self.possible_agents[:]
         self.drones = []
+        # Load initial positions
+        mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/position.mat')
+        initial_positions = mat["position"]
         # Create N Drones
         for index in range(self.num_agents):
             drone = Drone(initial_positions[index][0], initial_positions[index][1], index)
@@ -169,6 +173,7 @@ class State:
         self.network_connectivity = 0
         self.network_robustness = 0
 
+
     def update_state(self, agents):
         for i in range(self.num_agents):
             for j in range(i+1, self.num_agents):
@@ -184,8 +189,38 @@ class State:
         eigenvalues.sort()
         self.connectivity = eigenvalues[1]
 
-    def get_state(self, agent):
-        return []
 
     def isConnected(self, i, j):
         return self.adjacencyMatrix[i][j]
+
+
+    def get_global_state(self, agents):
+        """
+        State Space:
+        - Position [x,y]
+        - Vulnerability level of a node v regarding failures: P_\theta(v)
+        - Local estimate of algebraic connectivity given a node v: \lambda_v
+        - Resulting potential field due to obstacles in agent's position: [F_ox, F_oy]
+        - Resulting potential field due to other drones in agent's position: [F_dx, F_dy]
+
+        Total number of states: 8
+        """
+        self.update_state(agents)
+        self.observations = dict()
+        for agent in agents:
+            self.observations[agent.name] = agent.get_state()
+        return self.observations
+
+
+    def get_state(self, agent):
+        """
+        State Space:
+        - Position [x,y]
+        - Vulnerability level of a node v regarding failures: P_\theta(v)
+        - Local estimate of algebraic connectivity given a node v: \lambda_v
+        - Resulting potential field due to obstacles in agent's position: [F_ox, F_oy]
+        - Resulting potential field due to other drones in agent's position: [F_dx, F_dy]
+
+        Total number of states: 8
+        """
+        return self.observations[agent.name]

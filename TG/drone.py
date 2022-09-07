@@ -4,12 +4,11 @@ import pygame
 from utils     import limit, constrain, derivativeBivariate
 from constants import *
 
-class Drone(object):
+class Drone():
     def __init__(self, x, y, index):
         """
             Idealized class representing a drone
-
-            :param x and y: represents inicial target 
+            :param x and y: represents inicial position 
         """
         # Variables used to move drone 
         self.location = pygame.math.Vector2(x,y) 
@@ -30,19 +29,26 @@ class Drone(object):
         self.theta = 0 # variavel para o eight somada no seek_around
         self.count = 0
         self.id = index
+        self.name = "Drone " + str(index)
         self.time_executing = 0  
         self.finished = False
+
+        # State variables
+        self.agent_state = State()
+
 
     def reached_goal(self, target):
         self.reached = target - self.location[0] <= THRESHOLD_TARGET
         return self.reached
-    
+
+
     def execute(self):
         self.arrive(self.target)
         self.time_executing +=1
         
         if (self.target - self.location[0]) < THRESHOLD_TARGET and self.time_executing < 300:
             self.finished = True
+
 
     def update(self):
         """
@@ -60,6 +66,7 @@ class Drone(object):
         self.location = constrain(self.location,SCREEN_WIDTH,SCREEN_HEIGHT)
         self.acceleration *= 0
 
+
     def applyForce(self, force):
         """
             Applies vetor force to Drone 
@@ -67,6 +74,7 @@ class Drone(object):
             You can divide by mass
         """
         self.acceleration += force/MASS 
+
 
     def seek(self, target):
         """
@@ -80,6 +88,7 @@ class Drone(object):
         # Applies steering force to drone
         self.applyForce(steer)
     
+
     def arrive_new(self, target):
         """
             Arrive using potential fields 
@@ -95,6 +104,7 @@ class Drone(object):
         
         accelerate = limit(error, self.max_force)
         self.applyForce(accelerate)
+
 
     def arrive(self, target):
         """
@@ -124,28 +134,24 @@ class Drone(object):
         # apply force to the Drone
         self.applyForce(steer)
 
-    def get_position(self):
-        return self.location
 
-    def get_target(self):
-        return self.target
-
-    def collision_avoidance(self, all_positions):
+    def collision_avoidance(self, positions):
         """
          This method avoids collisions with other drones
-         During simulation it receives all the positions from all drones 
+         During training it receives all the positions from all drones 
+         During evaluation it receives only the positions inside observable area 
         """
         # gets all positions of simultaneos drones
         aux = 0 
         soma = pygame.math.Vector2(0,0) # sums up all directions of close drones
         count = 0 # counts the number of drones that are close
-        for p in all_positions:
+        for p in positions:
         # compares current position to all the drones
         # aux != index -> avoids the auto-collision check
             d = (self.location - p.location).magnitude()
             separation_factor = 2.2
-            if ( (d > 0) and (d < AVOID_DISTANCE*separation_factor) and (aux != self.id) ) :
-                diff = (self.location - p.location).normalize()
+            if d > 0 and d < AVOID_DISTANCE * separation_factor and aux != self.id:
+                diff = (self.location - p.location).normalize() # returns vector with same direction but length one
                 diff = diff/d # proporcional to the distance. The closer the stronger needs to be
                 soma += diff
                 count += 1 # p drone is close 
@@ -159,12 +165,6 @@ class Drone(object):
             steer = limit(steer,self.max_force)
             self.applyForce(steer)
                   
-    def draw(self, window):
-        """
-            Defines shape of Drone and draw it to screen
-        """
-        # usar sprite para desenhar drone
-        pygame.draw.circle(window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
 
     def check_collision(self, positions_drones, pos_obstacles):
         """
@@ -183,7 +183,7 @@ class Drone(object):
                 #self.velocity *= d/(AVOID_DISTANCE*factor_distance)
                 f_repulsion = derivativeBivariate(0.001,.001, p.location , self.location )/SAMPLE_TIME
                 #print(f_repulsion)
-                f_repulsion = limit(f_repulsion,self.max_force*1.8)
+                f_repulsion = limit(f_repulsion, self.max_force*1.8)
 
                 self.applyForce(-f_repulsion)
                 #print(f'Alerta de colisão drone {index} com drone {aux}')
@@ -207,53 +207,69 @@ class Drone(object):
 
                 self.applyForce(-f_repulsion)
 
-class State:
-    def __init__(self, x, y, local_robustness, local_connectivity, drones_impulse, obstacles_impulse):
-        self._x = x
-        self._y = y
-        self._local_robustness = local_robustness
-        self._local_connectivity = local_connectivity
-        self._drones_impulse = drones_impulse
-        self._obstacles_impulse = obstacles_impulse
-
-    def get_state(self):
-        state = {
-            "x": self._x, 
-            "y": self._y, 
-            "local_robustness": self._local_robustness, 
-            "local_connectivity": self._local_connectivity, 
-            "drones_impulse": self._drones_impulse, 
-            "obstacles_impulse": self._obstacles_impulse 
-        }
-        return state
 
     def get_position(self):
-        return (self._x, self._y)
+        return self.location
 
-    def get_robustness(self):
-        return self._local_robustness
 
-    def get_connectivity(self):
-        return self._local_connectivity
+    def get_state(self):
+        return [
+            self.agent_state.get_position(),
+            self.agent_state.get_vulnerability_level(),
+            self.agent_state.get_connectivity_level(),
+            self.agent_state.get_obstacles_potential(),
+            self.agent_state.get_neighbors_potential()
+        ]
+            
 
-    def get_drones_impulse(self):
-        return self._drones_impulse
+    def draw(self, window):
+        """
+            Defines shape of Drone and draw it to screen
+        """
+        # usar sprite para desenhar drone
+        pygame.draw.circle(window, BLUE, self.location, radius=RADIUS_OBSTACLES//4, width=20)
 
-    def get_obstacles_impulse(self):
-        return self._obstacles_impulse
 
-    def update_position(self, x, y):
-        self._x = x
-        self._y = y 
+class State:
+    def __init__(self):
+        self.pos_x = None
+        self.pos_y = None
+        self.vulnerability_level = None
+        self.connectivity_level = None
+        self.obstacles_potential_x = None
+        self.obstacles_potential_y = None
+        self.neighbors_potential_x = None
+        self.neighbors_potential_y = None
 
-    def update_robustness(self):
-        pass
+    def get_position(self):
+        return self._x, self._y
 
-    def update_connectivity(self):
-        pass
+    def get_vulnerability_level(self):
+        return self.vulnerability_level
 
-    def update_drones_impulse(self):
-        pass
+    def get_connectivity_level(self):
+        return self.connectivity_level
 
-    def update_obstacles_impulse(self):
-        pass
+    def get_neighbors_potential(self):
+        return self.neighbors_potential_x, self.neighbors_potential_y
+
+    def get_obstacles_potential(self):
+        return self.obstacles_potential_x, self.obstacles_potential_y
+
+    def set_position(self, x, y):
+        self.pos_x = x
+        self.pos_y = y
+        
+    def set_vulnerability_level(self, level):
+        self.vulnerability_level = level
+
+    def set_connectivity_level(self, level):
+        self.connectivity_level = level
+
+    def set_neighbors_potential(self, potential):
+        self.neighbors_potential_x = potential[0]
+        self.neighbors_potential_y = potential[1]
+
+    def set_obstacles_potential(self, potential):
+        self.obstacles_potential_x = potential[0]
+        self.obstacles_potential_y = potential[1]
