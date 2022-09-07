@@ -24,7 +24,7 @@ class Simulation(object):
             self.start_watch = time.time()
         self.time_executing += SAMPLE_TIME
 
-        self.environment.scan(self, self.obstacles)
+        self.environment.scan()
         self.environment.update(self.swarm)
         return self.continue_simulation()
 

@@ -1,5 +1,7 @@
 import scipy.io
 import pygame 
+import random
+import scipy.io
 import numpy as np
 
 from gym              import spaces
@@ -10,19 +12,8 @@ from pettingzoo       import ParallelEnv
 
 class CoverageMissionEnv(ParallelEnv):
     """Coverage Mission Environment that follows PettingZoo Gym interface"""
-
-    """
-        State Space:
-        - Position [x,y]
-        - Vulnerability level of a node v regarding failures: P_\theta(v)
-        - Local estimate of algebraic connectivity given a node v: \lambda_v
-        - Resulting potential field due to obstacles in agent's position: [F_ox, F_oy]
-        - Resulting potential field due to other drones in agent's position: [F_dx, F_dy]
-
-        Total number of states: 8
-    """
-    N_SPACE = 8
     metadata = {'render.modes': ['human']}
+    N_SPACE = 8
 
     def __init__(self, num_obstacles, num_agents):
         """
@@ -40,15 +31,16 @@ class CoverageMissionEnv(ParallelEnv):
         )
         # Define action and state space
         self.action_spaces = dict(
-            zip(self.possible_agents, [spaces.Box(low=np.array([0]),high=np.array([1]), dtype=np.float32) for _ in range(num_agents)])
+            zip(self.possible_agents, [spaces.Box(low=np.array([0, 0]),high=np.array([1, 1]), dtype=np.float32) for _ in range(num_agents)])
         )
         self.observation_spaces = dict(
-            zip(self.possible_agents, [spaces.Discrete(self.N_SPACE) for _ in range(num_agents)])
+            zip(self.possible_agents, [spaces.Box(low=np.zeros(self.N_SPACE),high=np.ones(self.N_SPACE), dtype=np.float32) for _ in range(num_agents)])
         ) 
         
         # Environment constraints
         self.width = SCREEN_WIDTH
         self.height = SCREEN_HEIGHT
+        self.target = SCREEN_WIDTH
         # Environment variables
         self.num_obstacles = num_obstacles
         self.env_state = State(num_agents)
@@ -62,24 +54,40 @@ class CoverageMissionEnv(ParallelEnv):
         return self.action_spaces[agent]
 
 
-    def step(self, actions):
+    def step(self, actions: dict):
         """
         step(action) takes in an action for each agent and should return the
         - observations
         - rewards
         - dones
         - infos
-        dicts where each dict looks like {agent_1: item_1, agent_2: item_2}
+
+        Inputs and outputs are dicts where each dict looks like {agent_1: item_1, agent_2: item_2}
         """
         if not actions:
             self.agents = []
             return {}, {}, {}, {}
         
+        # 1. Execute actions
+        for agent in actions:
+            id = self.agent_name_mapping[agent]
+            self.drones[id].execute(actions[agent])
+            
+        # 2. Update swarm state
+        self.env_state.update_state(self.drones)
 
+        # 3. Retrieve swarm state
+        observations = self.env_state.get_global_state(self.drones)
 
-        return {}, {}, {}, {}
+        # 4. Check completion
+        dones = self.env_state.check_completion(self.drones)
 
-        #return states, rewards, done, info
+        # 5. Calculate rewards
+        rewards = self.env_state.calculate_rewards(self.drones)
+
+        info = dict()
+
+        return observations, rewards, dones, info
 
 
     def reset(self, seed=None, return_info=False, options=None):
@@ -122,6 +130,7 @@ class CoverageMissionEnv(ParallelEnv):
         pass
 
     def generate_agents(self):
+        # Create new swarm of drones
         self.agents = self.possible_agents[:]
         self.drones = []
         # Load initial positions
@@ -132,38 +141,39 @@ class CoverageMissionEnv(ParallelEnv):
             drone = Drone(initial_positions[index][0], initial_positions[index][1], index)
             self.drones.append(drone)
 
-    def generate_obstacles(self, random=False):
+    def generate_obstacles(self, deterministic=True):
         self.obstacles = []
-        if random:
-            for _ in range(self.num_obstacles):
-                pos_x = random.uniform(SCREEN_WIDTH*0.1, SCREEN_WIDTH*0.9)
-                pos_y = random.uniform(0, SCREEN_HEIGHT)
-                self.obstacles.append(pygame.math.Vector2(pos_x, pos_y)) 
-        else:
+        if deterministic:
             mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
             obstacles_positions = mat["obstacles"]
             for index in range(len(obstacles_positions)):
                 self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
-                                  
+        else:
+            for _ in range(self.num_obstacles):
+                pos_x = random.uniform(SCREEN_WIDTH*0.1, SCREEN_WIDTH*0.9)
+                pos_y = random.uniform(0, SCREEN_HEIGHT)
+                self.obstacles.append(pygame.math.Vector2(pos_x, pos_y)) 
+                 
     def get_obstacles(self):
         return self.obstacles
 
     def update(self):
         self.env_state.update_state(self.agents)
         
-    def scan(self, simulation, list_obst):
-        for drone in simulation.swarm:
+    def scan(self):
+        for drone in self.drones:
             # checks if drones colided with eachother
-            drone.collision_avoidance(simulation.swarm)
-            drone.check_collision(simulation.swarm, list_obst) 
+            drone.collision_avoidance(self.drones)
+            drone.check_collision(self.drones, self.obstacles) 
             drone.update()
             # Print if drone reached destination
-            if not drone.reached and drone.reached_goal(simulation.target_simulation):
+            if not drone.reached and drone.reached_goal(self.target):
                 print(f"Drone {drone.id} reached target")
 
 class State:
     def __init__(self, num_agents):
         self.num_agents = num_agents
+        self.target = SCREEN_WIDTH
         # Network status
         self.adjacencyMatrix = np.zeros((num_agents,num_agents))
         self.degreeMatrix = np.zeros((num_agents,num_agents))
@@ -208,7 +218,7 @@ class State:
         self.update_state(agents)
         self.observations = dict()
         for agent in agents:
-            self.observations[agent.name] = agent.get_state()
+            self.observations[agent.name] = agent.get_state() if agent.alive else None
         return self.observations
 
 
@@ -224,3 +234,21 @@ class State:
         Total number of states: 8
         """
         return self.observations[agent.name]
+
+
+    def check_completion(self, agents):
+        dones = dict()
+        for agent in agents:
+            dones[agent.name] = True if agent.reached_goal(self.target) or not agent.alive else False
+        return dones
+
+    
+    def calculate_rewards(self, agents):
+        rewards = dict()
+        for agent in agents:
+            if agent.alive:
+                rewards[agent.name] = agent.get_position()[0] / self.target    # Rate of completition
+                rewards[agent.name] += 0    # add reward to connection failure
+            else:
+                rewards[agent.name] = 0
+        return rewards

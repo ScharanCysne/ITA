@@ -42,7 +42,7 @@ class Drone():
         return self.reached
 
 
-    def execute(self):
+    def execute(self, action):
         self.arrive(self.target)
         self.time_executing +=1
         
@@ -74,36 +74,6 @@ class Drone():
             You can divide by mass
         """
         self.acceleration += force/MASS 
-
-
-    def seek(self, target):
-        """
-            Seek Steering force Algorithm
-        """
-        self.desired  = ((target - self.location[0]) / SCREEN_WIDTH) * self.max_speed
-        # Calculates steering force
-        steer = self.desired  - self.velocity
-        # Limit the magnitude of the steering force.
-        steer = limit(steer,self.max_force)
-        # Applies steering force to drone
-        self.applyForce(steer)
-    
-
-    def arrive_new(self, target):
-        """
-            Arrive using potential fields 
-        """
-        # Calculates vector desired 
-        velocity_attract = pygame.math.Vector2(0,0)
-        velocity_repulsion= pygame.math.Vector2(0,0)
-
-        velocity_attract = derivativeBivariate(.05,.05,[target, SCREEN_HEIGHT//2],self.location)
-
-        desired_velocity = (velocity_attract - velocity_repulsion) 
-        error = (desired_velocity - self.velocity) / SAMPLE_TIME 
-        
-        accelerate = limit(error, self.max_force)
-        self.applyForce(accelerate)
 
 
     def arrive(self, target):
@@ -242,7 +212,7 @@ class State:
         self.neighbors_potential_y = None
 
     def get_position(self):
-        return self._x, self._y
+        return self.pos_x, self.pos_y
 
     def get_vulnerability_level(self):
         return self.vulnerability_level
