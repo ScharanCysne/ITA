@@ -10,8 +10,8 @@ def distance(x0, y0, x1, y1):
     return np.sqrt((x0 - x1)**2 + (y0 - y1)**2)
 
 def distance(drone_0, drone_1):
-    pos_x_0, pos_y_0 = drone_0.get_position()
-    pos_x_1, pos_y_1 = drone_1.get_position()
+    pos_x_0, pos_y_0 = drone_0.location
+    pos_x_1, pos_y_1 = drone_1.location
     return np.sqrt((pos_x_0 - pos_x_1)**2 + (pos_y_0 - pos_y_1)**2)
 
 def normalFunction(omega, center, position):
@@ -40,7 +40,7 @@ def derivativeBivariate(alpha, beta, center, position):
         control variables: Alpha and Beta will control the stringthof the vectors in x and y directions
         return: point in the derivative of the bivariate function
     '''
-    f = bivariateFunction(alpha,beta,center,position)
+    f = bivariateFunction(alpha, beta, center, position)
     dx = f * (-2*alpha*(position.x-center.x))
     dy = f * (-2*beta*(position.y-center.y))
     return pygame.math.Vector2(dx,dy)
