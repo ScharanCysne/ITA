@@ -3,14 +3,15 @@ PIX2M = 0.01                    # factor to convert from pixels to meters
 M2PIX = 100.0                   # factor to convert from meters to pixels
 SCREEN_WIDTH = 1600
 SCREEN_HEIGHT = 900
-NUM_DRONES = 20                 # Number of simultaneous drones
-SIZE_DRONE = 18
+NUM_DRONES = 10                 # Number of simultaneous drones
+SIZE_DRONE = 10
 SIZE_TRACK = 100
 RESOLUTION = 30                 # of grid
 NUM_OBSTACLES = 20
-RADIUS_OBSTACLES = 40
+RADIUS_OBSTACLES = 20
 TIME_MAX_SIMULATION = 20        # Time to stop simulation in case the conditions are not completed
 OBSERVABLE_RADIUS = 200
+AVOID_DISTANCE = 20
 
 # Sample Time Parameters
 FREQUENCY = 60.0                # simulation frequency
@@ -23,8 +24,6 @@ ANGULAR_SPEED = 1.5             # default angular speed
 SEEK_FORCE = 0.5                # max seek force
 THRESHOLD_TARGET = SCREEN_WIDTH*0.1 
 MASS = 10                       # Drone Mass, used to calculate force
-HOP_AHEAD = 60                  # distance of prevision
-AVOID_DISTANCE = 30             # distance to avoid collision
 
 # Colors
 WHITE = (255,255,255)

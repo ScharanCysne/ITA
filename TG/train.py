@@ -6,8 +6,7 @@ from stable_baselines3                  import PPO
 from stable_baselines3.common.policies  import ActorCriticPolicy
 
 # Trining Parameters
-NUM_EPISODES = 1
-NUM_TIMESTEPS = 1
+NUM_EPISODES = 10000
 
 # Creation of Environment
 env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES)
@@ -20,5 +19,5 @@ model = PPO(
     env,
     verbose=1
 )
-model.learn(total_timesteps=NUM_EPISODES)
+model = model.learn(total_timesteps=NUM_EPISODES)
 model.save("policy")
