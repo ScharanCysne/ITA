@@ -6,8 +6,17 @@ from stable_baselines3                  import PPO
 from stable_baselines3.common.policies  import ActorCriticPolicy
 
 # Training Parameters
-NUM_EPISODES = 2000
+NUM_DRONES = 5
+NUM_OBSTACLES = 20
+NUM_EPISODES = 50000
 TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_ITERATION
+
+print(" ---------- ")
+print("Number of Agents: " + str(NUM_DRONES))
+print("Number of Obstacles: " + str(NUM_OBSTACLES))
+print("Number of Episodes: " + str(NUM_EPISODES))
+print("Number of Timesteps per Episode: " + str(TIMESTEPS_PER_ITERATION))
+print(" ---------- ")
 
 # Creation of Environment
 env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES)

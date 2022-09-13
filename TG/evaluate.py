@@ -8,6 +8,8 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
+NUM_DRONES = 5
+NUM_OBSTACLES = 20
 NUM_EPISODES = 10
 model = PPO.load("policy")
 
@@ -18,11 +20,14 @@ parallel_api_test(env, num_cycles=1000)
 # Render interface
 interface = Interface()
 episode_time = []
-
+timesteps = 0
 for episode in range(NUM_EPISODES):
+    print(timesteps)
+    timesteps = 0
     done = False
     obs = env.reset()
     while not done:
+        timesteps += 1
         actions = dict()
         for agent in obs:
             actions[agent] = model.predict(obs[agent], deterministic=True)[0]

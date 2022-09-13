@@ -276,10 +276,10 @@ class State:
         rewards = dict()
         for name in alive_agents:
             agent = agents_mapping[name]
-            rewards[agent.name] = -1                                           # Individual Rate of completition
+            rewards[agent.name] = -0.1                                           # Individual Rate of completition
             #rewards[agent.name] = agent.location[0] / self.target               # Individual Rate of completition
             #rewards[agent.name] += self.cm[0] / self.target                     # Group Rate of completition
-            rewards[agent.name] += 0 if self.network_connectivity else -10      # Connectivity
+            rewards[agent.name] = 0 if self.network_connectivity else -100       # Connectivity
             #if self.cm[0] > 0.9 * self.target:
             #    rewards[agent.name] += 100 
                 
