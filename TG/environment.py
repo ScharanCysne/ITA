@@ -5,6 +5,7 @@ import scipy.io
 import numpy as np
 import functools
 
+from constants        import TIME_MAX_SIMULATION
 from gym              import spaces
 from utils            import distance
 from drone            import Drone
@@ -102,7 +103,7 @@ class CoverageMissionEnv(ParallelEnv):
         observations = self.env_state.get_global_state(self.agents, self.agents_mapping)
 
         # 4. Check completion
-        dones = self.env_state.check_completion(self.agents, self.agents_mapping)
+        dones = self.env_state.check_completion(self.agents, self.agents_mapping, self.time_executing)
 
         # 5. Calculate rewards
         rewards = self.env_state.calculate_rewards(self.agents, self.agents_mapping)
@@ -144,7 +145,7 @@ class CoverageMissionEnv(ParallelEnv):
         Renders the environment. In human mode, it can print to terminal, open
         up a graphical window, or open up some other display that a human can see and understand.
         """
-        return self.drones, self.obstacles, self.env_state, self.num_agents
+        return self.drones, self.obstacles, self.env_state, self.num_agents, self.time_executing
         
 
     def seed(self, seed=None):
@@ -162,7 +163,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.agents_mapping = dict()
         # Load initial positions
         mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/position.mat')
-        initial_positions = self.rescale(mat["position"])
+        initial_positions = self.rescale(mat["position"], True)
         # Create N Drones
         for index in range(self.num_agents):
             drone = Drone(initial_positions[index][0], initial_positions[index][1], index)
@@ -174,7 +175,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.obstacles = []
         if deterministic:
             mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
-            obstacles_positions = self.rescale(mat["obstacles"])
+            obstacles_positions = self.rescale(mat["obstacles"], False)
             for index in range(len(obstacles_positions)):
                 self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
         else:
@@ -184,14 +185,16 @@ class CoverageMissionEnv(ParallelEnv):
                 self.obstacles.append(pygame.math.Vector2(pos_x, pos_y)) 
 
 
-    def rescale(self, positions):
+    def rescale(self, positions, agent=True):
         pos_max_x = max([position[0] for position in positions])
         pos_max_y = max([position[1] for position in positions])
         ratio_width = self.width / pos_max_x
         ratio_height = self.height / pos_max_y 
         for position in positions:
-            position[0] *= 0.9*ratio_width
-            position[1] *= ratio_height
+            position[0] *= ratio_height / 2 if agent else 0.9*ratio_width
+            position[1] *= ratio_height / 2 if agent else ratio_height 
+            if agent:
+                position[1] += SCREEN_HEIGHT // 4
         return positions
 
 
@@ -216,6 +219,7 @@ class State:
         # Global state
         self.network_connectivity = 0
         self.network_robustness = 0
+        self.cm = 0
 
 
     def update_state(self, agents):
@@ -234,6 +238,12 @@ class State:
         eigenvalues.sort()
         self.connectivity = eigenvalues[1]
         self.network_connectivity = 1 if self.connectivity else 0
+        # Update CM of topology
+        cm = pygame.math.Vector2(0,0)
+        for agent in agents:
+            cm += agent.location
+        cm /= len(agents)
+        self.cm = cm
 
 
     def isConnected(self, i, j):
@@ -250,12 +260,14 @@ class State:
         return self.observations
 
 
-    def check_completion(self, alive_agents, agents_mapping):
+    def check_completion(self, alive_agents, agents_mapping, time_executing):
         dones = dict()
         env_done = True
         for name in alive_agents:
             if not agents_mapping[name].reached_goal():
-                env_done = False 
+                env_done = False
+        if time_executing > TIME_MAX_SIMULATION:
+            env_done = True 
         dones = {agent : env_done for agent in alive_agents}
         return dones
 
@@ -264,6 +276,11 @@ class State:
         rewards = dict()
         for name in alive_agents:
             agent = agents_mapping[name]
-            rewards[agent.name] = - agent.location[0] / self.target    # Rate of completition
-            rewards[agent.name] += 0    # add reward to connection failure
+            rewards[agent.name] = -1                                           # Individual Rate of completition
+            #rewards[agent.name] = agent.location[0] / self.target               # Individual Rate of completition
+            #rewards[agent.name] += self.cm[0] / self.target                     # Group Rate of completition
+            rewards[agent.name] += 0 if self.network_connectivity else -10      # Connectivity
+            #if self.cm[0] > 0.9 * self.target:
+            #    rewards[agent.name] += 100 
+                
         return rewards

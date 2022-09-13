@@ -19,8 +19,8 @@ parallel_api_test(env, num_cycles=1000)
 interface = Interface()
 episode_time = []
 
-done = False
 for episode in range(NUM_EPISODES):
+    done = False
     obs = env.reset()
     while not done:
         actions = dict()
@@ -30,8 +30,8 @@ for episode in range(NUM_EPISODES):
         
         # Draws at every dt
         interface.clock.tick(FREQUENCY)
-        swarm, obstacles, env_state, num_swarm = env.render()
-        interface.draw(swarm, obstacles, env_state, num_swarm, episode_time)
+        swarm, obstacles, env_state, num_swarm, time_executing = env.render()
+        interface.draw(swarm, obstacles, env_state, num_swarm, episode_time, time_executing)
         # Get Pygame Events 
         for event in pygame.event.get():
             # Qui Event
@@ -48,8 +48,6 @@ for episode in range(NUM_EPISODES):
                             sys.exit()
                     if not pause:
                         break
-        for agent in dones:
-            if not dones[agent]:
-                done = False
-                break
+        if dones[agent]:
+            done = True
     env.close()

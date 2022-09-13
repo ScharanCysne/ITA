@@ -11,7 +11,6 @@ class Interface(object):
         self.font24 = pygame.font.SysFont(None, 24)
         self.screen = pygame.display.set_mode(self.size)
         self.clock = pygame.time.Clock()
-        self.time_executing = 0
 
         # Title
         self.title = self.font24.render('Deep Reinforcement Learning for Drones in Coverage Missions', True, BLACK)
@@ -28,11 +27,10 @@ class Interface(object):
         # Simulation Time
         self.sim_time = self.font24.render(f"Time: 0.00s", True, BLACK)
 
-    def draw(self, swarm, obstacles, env_state, num_swarm, out_time):
-        self.time_executing += SAMPLE_TIME # count time of execution based on the sampling
-        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time)
+    def draw(self, swarm, obstacles, env_state, num_swarm, out_time, time_executing):
+        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time, time_executing)
 
-    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[]):
+    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[], time_executing=0):
         # Background
         self.screen.fill(LIGHT_GRAY)                             
         # Starting area
@@ -52,7 +50,7 @@ class Interface(object):
         # Field vectors
         self.draw_field_vectors(swarm, obstacles)                                
         # Running Time
-        self.sim_time = self.font24.render(f"Time: {self.time_executing:.2f} s", True, BLACK)
+        self.sim_time = self.font24.render(f"Time: {time_executing:.2f} s", True, BLACK)
         self.screen.blit(self.sim_time, (1490, 20))   
         # Title
         self.screen.blit(self.title, (20, 20))
