@@ -17,7 +17,7 @@ class CoverageMissionEnv(ParallelEnv):
     metadata = {'render.modes': ['human']}
     N_SPACE = 8
 
-    def __init__(self, num_obstacles, num_agents):
+    def __init__(self, num_obstacles, num_agents, enable_target=True, enable_obstacles=True):
         """
         The init method takes in environment arguments and define the following attributes:
         - possible_agents
@@ -51,6 +51,8 @@ class CoverageMissionEnv(ParallelEnv):
         self.target = SCREEN_WIDTH
 
         # Environment variables
+        self.enable_target = enable_target
+        self.enable_obstacles = enable_obstacles
         self.num_obstacles = num_obstacles
         self.env_state = State(num_agents)
 
@@ -94,7 +96,7 @@ class CoverageMissionEnv(ParallelEnv):
             self.drones[id].scan_neighbors(neighbors_positions)
             self.drones[id].scan_obstacles(obstacles_positions)
             self.drones[id].calculate_potential_field(neighbors_positions, obstacles_positions) 
-            self.drones[id].execute(action)
+            self.drones[id].execute(action, self.enable_target)
             
         # 2. Update swarm state
         self.env_state.update_state(self.drones)
@@ -173,12 +175,12 @@ class CoverageMissionEnv(ParallelEnv):
 
     def generate_obstacles(self, deterministic=True):
         self.obstacles = []
-        if deterministic:
+        if deterministic and self.enable_obstacles:
             mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
             obstacles_positions = self.rescale(mat["obstacles"], False)
             for index in range(len(obstacles_positions)):
                 self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
-        else:
+        elif self.enable_obstacles:
             for _ in range(self.num_obstacles):
                 pos_x = random.uniform(SCREEN_WIDTH*0.1, SCREEN_WIDTH*0.9)
                 pos_y = random.uniform(0, SCREEN_HEIGHT)
@@ -276,7 +278,7 @@ class State:
         rewards = dict()
         for name in alive_agents:
             agent = agents_mapping[name]
-            rewards[agent.name] = -0.1                                           # Individual Rate of completition
+            #rewards[agent.name] = -0.1                                           # Individual Rate of completition
             #rewards[agent.name] = agent.location[0] / self.target               # Individual Rate of completition
             #rewards[agent.name] += self.cm[0] / self.target                     # Group Rate of completition
             rewards[agent.name] = 0 if self.network_connectivity else -100       # Connectivity

@@ -8,13 +8,20 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
-NUM_DRONES = 5
+NUM_DRONES = 10
 NUM_OBSTACLES = 20
+NUM_TIMESTEPS = 30000
 NUM_EPISODES = 10
-model = PPO.load("policy")
+
+# Test Env Variables
+ENABLE_TARGET = False
+ENABLE_OBSTACLES = True
+
+# Load Model
+model = PPO.load(f"policy_{NUM_DRONES}_{NUM_TIMESTEPS}_{ENABLE_TARGET}_{ENABLE_OBSTACLES}")
 
 # Creation of Environment
-env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES)
+env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES, ENABLE_TARGET, ENABLE_OBSTACLES)
 parallel_api_test(env, num_cycles=1000)
 
 # Render interface
@@ -22,7 +29,6 @@ interface = Interface()
 episode_time = []
 timesteps = 0
 for episode in range(NUM_EPISODES):
-    print(timesteps)
     timesteps = 0
     done = False
     obs = env.reset()

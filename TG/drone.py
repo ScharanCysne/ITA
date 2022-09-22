@@ -48,14 +48,15 @@ class Drone():
         self.acceleration += force/MASS 
 
 
-    def execute(self, action):
+    def execute(self, action, enable_target=True):
         """
             Execute action
             Suffer effects from the environment
         """
         self.time_executing += 1
         # updates behavior in machine state
-        self.arrive(self.target)
+        if enable_target: 
+            self.arrive(self.target)
         # Updates velocity at every step and limits it to max_speed
         self.velocity += self.acceleration 
         self.velocity = limit(self.velocity, self.max_speed)
