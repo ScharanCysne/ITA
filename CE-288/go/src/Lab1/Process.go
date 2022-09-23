@@ -57,18 +57,16 @@ var clock Clock // Process' Clock
 var state State // Process' State
 var rep Reply   // List of replies received after request
 var queue Queue // Queue of requests to reply
+var status map[int]string
 
 // Possible States
 const RELEASED = 0
 const WANTED = 1
 const HELD = 2
 
-// Send a message msg to a certain address with the option of updating the clock or not
-func sendMessage(conn *net.UDPConn, msg string, update bool) {
+// Send a message msg to a certain address
+func sendMessage(conn *net.UDPConn, msg string) {
 	clock.mu.Lock()
-	if update { // Update current logical clock
-		clock.value++
-	}
 	// Append Process Id and Clock value in Msg
 	msg = idStr + " " + strconv.Itoa(clock.value) + " " + msg
 	clock.mu.Unlock()
@@ -121,14 +119,14 @@ func initConnections() {
 }
 
 func doClientJob(ch chan string) {
-	// Everytime it identifies a new input, sends a request to access CS
 	for {
-		select {
-		case x, valid := <-ch: // Wait receive the command to request resource
+		select { // Keeps checking for new inputs
+		case x, valid := <-ch: // Wait receive the command to request/free resource
 			if valid {
 				if x == idStr { // Internal action
 					clock.mu.Lock()
 					clock.value++
+					fmt.Println("State:", status[state.value], "Clock:", clock.value)
 					clock.mu.Unlock()
 				} else if x == "request" { // Request access to CS
 					state.mu.Lock()
@@ -136,12 +134,19 @@ func doClientJob(ch chan string) {
 						fmt.Println("[500] Invalid Request: Process already awaiting for resource.")
 					}
 					if state.value == RELEASED {
-						state.value = WANTED // Change State to WANTED
+						state.value = WANTED        // Change State to WANTED
+						time.Sleep(time.Second * 2) // Delay of 2s for testing purposes
+						// Clear reply list
 						rep.mu.Lock()
-						rep.value = make([]int, 0) // Empty reply list
+						rep.value = make([]int, 0)
 						rep.mu.Unlock()
-						for j := 0; j < nClients; j++ { // Send Request to all other processes
-							sendMessage(clientConn[clientIds[j]], "request", true)
+						// Update clock
+						clock.mu.Lock()
+						clock.value++
+						clock.mu.Unlock()
+						// Send Request to all other processes
+						for j := 0; j < nClients; j++ {
+							sendMessage(clientConn[clientIds[j]], "request")
 						}
 					}
 					state.mu.Unlock()
@@ -156,13 +161,14 @@ func doClientJob(ch chan string) {
 						for len(queue.value) > 0 {
 							queueId := queue.value[0]
 							queue.value = queue.value[1:]
-							sendMessage(clientConn[queueId], "reply", true)
+							sendMessage(clientConn[queueId], "reply")
 						}
 						queue.mu.Unlock()
 						rep.mu.Lock()
 						rep.value = make([]int, 0) // Empty reply list
 						rep.mu.Unlock()
-						sendMessage(resourceConn, "free", true)
+						sendMessage(resourceConn, "free")
+						fmt.Println("State:", status[state.value], "Clock:", clock.value)
 					}
 					state.mu.Unlock()
 				} else {
@@ -170,7 +176,7 @@ func doClientJob(ch chan string) {
 				}
 
 			} else {
-				fmt.Println("Closed channel")
+				fmt.Println("[500] Closed Channel")
 			}
 		default:
 			time.Sleep(time.Second * 1)
@@ -179,9 +185,10 @@ func doClientJob(ch chan string) {
 	}
 }
 
-// Listens to requests from other precesses
 func doServerJob(ch chan string) {
+	// Listens to requests from other precesses
 	fmt.Println("\nListening...\n")
+	fmt.Println("State:", status[RELEASED], "Clock:", 0)
 	// Buffer
 	buf := make([]byte, 1024)
 
@@ -191,51 +198,57 @@ func doServerJob(ch chan string) {
 		utils.CheckError(err)
 		// Store Message
 		msg := string(buf[0:n])
-		// Handle Request
+		// Parse Message
 		s := strings.Split(msg, " ") //[id, clock, msg]
 		processId, _ := strconv.Atoi(s[0])
 		processClock, _ := strconv.Atoi(s[1])
 		processMsg := s[2]
-		// Handles Request of Replies
-		handleMessage(addr, processId, processClock, processMsg, ch)
-	}
-}
 
-func handleMessage(addr *net.UDPAddr, processId int, processClock int, processMsg string, ch chan string) {
-	state.mu.Lock()
-	clock.mu.Lock()
-	// Update clock
-	clock.value = utils.Max(clock.value, processClock) + 1
-	fmt.Println("State:", state.value, "Clock:", clock.value)
-	fmt.Println(addr, processMsg, "Id:", processId, "Clock:", processClock)
+		clock.mu.Lock()
+		currentClock := clock.value
+		clock.mu.Unlock()
 
-	if processMsg == "request" {
-		if state.value == HELD || (state.value == WANTED && clock.value < processClock) || (state.value == WANTED && clock.value == processClock && id < processId) {
-			queue.mu.Lock()
-			queue.value = append(queue.value, processId)
-			queue.mu.Unlock()
-		} else {
-			sendMessage(clientConn[processId], "reply", false)
-		}
-	}
-	if processMsg == "reply" {
-		if state.value == WANTED {
-			rep.mu.Lock()
-			// Queue replies
-			rep.value = append(rep.value, processId)
-			// If got enough replies, access the resource
-			if len(rep.value) == nClients {
-				state.value = HELD
-				sendMessage(resourceConn, "held", false)
-				fmt.Println("State:", state.value, "Clock:", clock.value)
+		// Process Status
+		fmt.Println(addr, processMsg, "Id:", processId, "Received Clock:", processClock)
+		state.mu.Lock()
+		// Handles Request/Replies
+		if processMsg == "request" {
+			fmt.Println(status[state.value], "Clock:", currentClock, "Request Clock:", processClock)
+			if state.value == HELD || (state.value == WANTED && (currentClock < processClock || (currentClock == processClock && id < processId))) {
+				queue.mu.Lock()
+				queue.value = append(queue.value, processId)
+				queue.mu.Unlock()
+			} else {
+				sendMessage(clientConn[processId], "reply")
 			}
-			rep.mu.Unlock()
-		} else {
-			// discard message for it is already HELD or RELEASED
 		}
+		if processMsg == "reply" {
+			clock.mu.Lock()
+			clock.value = utils.Max(clock.value, processClock) + 1 // Update clock
+			clock.mu.Unlock()
+
+			if state.value == WANTED {
+				rep.mu.Lock()
+				// Queue replies
+				rep.value = append(rep.value, processId)
+				// If got enough replies, access the resource
+				if len(rep.value) == nClients {
+					state.value = HELD
+					sendMessage(resourceConn, "held")
+				}
+				rep.mu.Unlock()
+			} else {
+				// discard message for it is already HELD or RELEASED
+			}
+		}
+		// Update clock
+		clock.mu.Lock()
+		clock.value = utils.Max(clock.value, processClock) + 1 // Update clock
+		clock.mu.Unlock()
+
+		fmt.Println("State:", status[state.value], "Clock:", clock.value)
+		state.mu.Unlock()
 	}
-	clock.mu.Unlock()
-	state.mu.Unlock()
 }
 
 func main() {
@@ -245,6 +258,12 @@ func main() {
 	for i := 0; i < nClients; i++ {
 		defer clientConn[clientIds[i]].Close()
 	}
+
+	// Status map for Terminal Output
+	status = make(map[int]string)
+	status[RELEASED] = "RELEASED"
+	status[WANTED] = "WANTED"
+	status[HELD] = "HELD"
 
 	// Init State Mutex as RELEASED
 	state.mu.Lock()
