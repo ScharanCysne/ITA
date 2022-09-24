@@ -9,6 +9,8 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"utils"
 )
 
@@ -24,6 +26,13 @@ func main() {
 		n, addr, err := Connection.ReadFromUDP(buf)
 		utils.CheckError(err)
 		msg := string(buf[0:n])
-		fmt.Println(addr, " request: ", msg)
+
+		// Parse Message - "id clock msg"
+		s := strings.Split(msg, " ")
+		processId, _ := strconv.Atoi(s[0])
+		processClock, _ := strconv.Atoi(s[1])
+		processMsg := s[2]
+
+		fmt.Println(addr, "Id:", processId, "Clock:", processClock, "Action:", processMsg)
 	}
 }
