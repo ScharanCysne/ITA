@@ -241,8 +241,10 @@ func doServerJob(ch chan string) {
 				rep.value = append(rep.value, processId)
 				// If got enough replies, access the resource
 				if len(rep.value) == nClients {
+					/* START OF CRITICAL SECTION */
 					state.value = HELD
 					sendMessage(resourceConn, "held")
+					/* END OF CRITICAL SECTION */
 				}
 				rep.mu.Unlock()
 			} else {
