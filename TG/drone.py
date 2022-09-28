@@ -30,7 +30,6 @@ class Drone():
         self.id = index
         self.name = "Drone " + str(index)
         self.time_executing = 0  
-        self.finished = False
 
         # State variables
         self.neighbors = pygame.math.Vector2()
@@ -59,9 +58,10 @@ class Drone():
             self.arrive(self.target)
         # Updates velocity at every step and limits it to max_speed
         self.velocity += self.acceleration 
+        self.velocity += action
         self.velocity = limit(self.velocity, self.max_speed)
         # Updates position
-        self.location += (self.velocity + action) 
+        self.location += self.velocity 
         # Constrains position to limits of screen 
         self.location = constrain(self.location, SCREEN_WIDTH, SCREEN_HEIGHT)
         self.acceleration *= 0
@@ -69,9 +69,7 @@ class Drone():
         #if not self.reached and self.reached_goal():
         #    print(f"{self.name} reached target")
 
-        if (self.target - self.location[0]) < THRESHOLD_TARGET and self.time_executing < 300:
-            self.finished = True
-
+        
 
     def arrive(self, target):
         """

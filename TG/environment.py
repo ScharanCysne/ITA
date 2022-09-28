@@ -1,4 +1,4 @@
-import scipy.io
+import time
 import pygame 
 import random
 import scipy.io
@@ -6,11 +6,18 @@ import numpy as np
 import functools
 
 from constants        import TIME_MAX_SIMULATION
-from gym              import spaces
+from gym              import spaces, spec
 from utils            import distance
 from drone            import Drone
 from constants        import SAMPLE_TIME, SCREEN_WIDTH, SCREEN_HEIGHT, OBSERVABLE_RADIUS, FREQUENCY
 from pettingzoo       import ParallelEnv
+
+from stable_baselines3.common.monitor import ResultsWriter
+
+writer = ResultsWriter(
+    "tmp/monitor.csv",
+    header={"t_start": 0, "env_id": 0 }
+)
 
 class CoverageMissionEnv(ParallelEnv):
     """Coverage Mission Environment that follows PettingZoo Gym interface"""
@@ -39,6 +46,10 @@ class CoverageMissionEnv(ParallelEnv):
         - velocity in x axis
         - velocity in y axis
         """
+        # Monitor parameters
+        self.spec = 0
+        self.t_start = time.time()
+
         # Define possible agents
         self.possible_agents = ["Drone " + str(i) for i in range(num_agents)]
         self.agent_name_mapping = dict(
@@ -55,6 +66,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.enable_obstacles = enable_obstacles
         self.num_obstacles = num_obstacles
         self.env_state = State(num_agents)
+        self.cummulative_rewards = { agent:0 for agent in self.possible_agents }
 
 
     @functools.lru_cache(maxsize=None)
@@ -66,7 +78,7 @@ class CoverageMissionEnv(ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         # Define action space (vel_x, vel_y)
-        return spaces.Box(low=np.array([0, 0]), high=np.array([1, 1]), dtype=np.float64)
+        return spaces.Box(low=np.array([0, 0]), high=np.array([2, 2]), dtype=np.float64)
 
 
     def step(self, actions: dict):
@@ -115,6 +127,9 @@ class CoverageMissionEnv(ParallelEnv):
         # Update alive agents
         self.agents = [agent for agent in self.agents if not dones[agent]]
 
+        # Monitor current performance
+        self.monitor(dones, rewards) 
+
         return observations, rewards, dones, infos
 
 
@@ -135,6 +150,7 @@ class CoverageMissionEnv(ParallelEnv):
         # Initialize agents and obstacles positions
         self.generate_agents()
         self.generate_obstacles()
+        self.cummulative_rewards = { agent:0 for agent in self.possible_agents }
         
         # Reset observations
         self.env_state.update_state(self.drones)
@@ -149,6 +165,25 @@ class CoverageMissionEnv(ParallelEnv):
         """
         return self.drones, self.obstacles, self.env_state, self.num_agents, self.time_executing
         
+
+
+    def monitor(self, dones, rewards):
+        # Update episode cummulative reward
+        for agent in rewards:
+            self.cummulative_rewards[agent] += rewards[agent]
+        # Check if episode is finished
+        alldone = True 
+        for agent in dones:
+            if not dones[agent]:
+                alldone = False 
+
+        # If all done, record episode rewards
+        if alldone:
+            ep_rew = sum([reward for reward in self.cummulative_rewards.values()])
+            ep_len = self.time_executing
+            ep_info = {"r": round(ep_rew, 6), "l": ep_len, "t": round(time.time() - self.t_start, 6)}
+            writer.write_row(ep_info)
+    
 
     def seed(self, seed=None):
         pass
@@ -173,6 +208,12 @@ class CoverageMissionEnv(ParallelEnv):
             self.agents_mapping[drone.name] = drone
 
 
+    def generate_specific_obstacle(self, positions):
+        self.obstacles = []
+        for x, y in positions:
+            self.obstacles.append(pygame.math.Vector2(x, y))
+
+
     def generate_obstacles(self, deterministic=True):
         self.obstacles = []
         if deterministic and self.enable_obstacles:
@@ -188,13 +229,11 @@ class CoverageMissionEnv(ParallelEnv):
 
 
     def rescale(self, positions, agent=True):
-        pos_max_x = max([position[0] for position in positions])
         pos_max_y = max([position[1] for position in positions])
-        ratio_width = self.width / pos_max_x
-        ratio_height = self.height / pos_max_y 
+        ratio = self.height / pos_max_y 
         for position in positions:
-            position[0] *= ratio_height / 2 if agent else 0.9*ratio_width
-            position[1] *= ratio_height / 2 if agent else ratio_height 
+            position[0] *= ratio / 2 
+            position[1] *= ratio / 2  
             if agent:
                 position[1] += SCREEN_HEIGHT // 4
         return positions
@@ -238,7 +277,7 @@ class State:
         self.laplacianMatrix = self.degreeMatrix - self.adjacencyMatrix
         eigenvalues, _ = np.linalg.eig(self.laplacianMatrix)
         eigenvalues.sort()
-        self.connectivity = eigenvalues[1]
+        self.connectivity = 1 #eigenvalues[1]
         self.network_connectivity = 1 if self.connectivity else 0
         # Update CM of topology
         cm = pygame.math.Vector2(0,0)
@@ -264,10 +303,10 @@ class State:
 
     def check_completion(self, alive_agents, agents_mapping, time_executing):
         dones = dict()
-        env_done = True
-        for name in alive_agents:
-            if not agents_mapping[name].reached_goal():
-                env_done = False
+        env_done = False
+        #for name in alive_agents:
+        #    if not agents_mapping[name].reached_goal():
+        #        env_done = False
         if time_executing > TIME_MAX_SIMULATION:
             env_done = True 
         dones = {agent : env_done for agent in alive_agents}
@@ -276,13 +315,14 @@ class State:
     
     def calculate_rewards(self, alive_agents, agents_mapping):
         rewards = dict()
+        target = pygame.math.Vector2(0,0)
         for name in alive_agents:
             agent = agents_mapping[name]
             #rewards[agent.name] = -0.1                                           # Individual Rate of completition
             #rewards[agent.name] = agent.location[0] / self.target               # Individual Rate of completition
             #rewards[agent.name] += self.cm[0] / self.target                     # Group Rate of completition
-            rewards[agent.name] = 0 if self.network_connectivity else -100       # Connectivity
+            #rewards[agent.name] = 0 if self.network_connectivity else -100       # Connectivity
             #if self.cm[0] > 0.9 * self.target:
             #    rewards[agent.name] += 100 
-                
+            rewards[agent.name] = -(agent.location - target).magnitude() / SCREEN_WIDTH
         return rewards

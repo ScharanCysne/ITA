@@ -15,12 +15,10 @@ AVOID_DISTANCE = 20
 
 # Sample Time Parameters
 FREQUENCY = 60.0                # simulation frequency
-MAX_FREQUENCY = 1000.0          # simulation frequency to be used in intel oneAPI
 SAMPLE_TIME = 1.0 / FREQUENCY   # simulation sample time
 
 # Behavior Parameters
 FORWARD_SPEED = 2               # default linear speed when going forward
-ANGULAR_SPEED = 1.5             # default angular speed
 SEEK_FORCE = 0.5                # max seek force
 THRESHOLD_TARGET = SCREEN_WIDTH*0.1 
 MASS = 10                       # Drone Mass, used to calculate force

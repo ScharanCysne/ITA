@@ -95,14 +95,14 @@ class Interface(object):
     def draw_observable_area(self, swarm, drone, state, num_agents):
         paintable = set()
         hops = list()
-        for i in range(num_agents):
-            if state.adjacencyMatrix[drone][i]:
-                hops.append(i)
-                paintable.add(i)
-        for neighbor in hops:
-            for i in range(num_agents):
-                if state.adjacencyMatrix[neighbor][i]:
-                    paintable.add(i)
+        #for i in range(num_agents):
+        #    if state.adjacencyMatrix[drone][i]:
+        #        hops.append(i)
+        #        paintable.add(i)
+        #for neighbor in hops:
+        #    for i in range(num_agents):
+        #        if state.adjacencyMatrix[neighbor][i]:
+        #            paintable.add(i)
         paintable.add(drone)
 
         for drone in paintable:
