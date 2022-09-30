@@ -1,26 +1,33 @@
+
 # Simulation Parameters
-PIX2M = 0.01                    # factor to convert from pixels to meters
-M2PIX = 100.0                   # factor to convert from meters to pixels
-SCREEN_WIDTH = 1600
-SCREEN_HEIGHT = 900
 NUM_DRONES = 10                 # Number of simultaneous drones
-SIZE_DRONE = 10
 SIZE_TRACK = 100
+NUM_OBSTACLES = 50
+OBSERVABLE_RADIUS = 16
+AVOID_DISTANCE = 2
+
+UPPER_X = 500
+LOWER_X = 0
+UPPER_Y = 50
+LOWER_Y = 0
+
+# Display Parameters
+SCREEN_WIDTH = 1800
+SCREEN_HEIGHT = 180
 RESOLUTION = 30                 # of grid
-NUM_OBSTACLES = 20
-RADIUS_OBSTACLES = 20
-TIME_MAX_SIMULATION = 20        # Time to stop simulation in case the conditions are not completed
-OBSERVABLE_RADIUS = 200
-AVOID_DISTANCE = 20
+SIZE_OBSTACLES = 3
+SIZE_DRONE = 3
+RATIO = SCREEN_WIDTH / UPPER_X  # Factor to convert from pixels to meters
+TIME_MAX_SIMULATION = 10        # Time to stop simulation in case the conditions are not completed
 
 # Sample Time Parameters
 FREQUENCY = 60.0                # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY   # simulation sample time
 
 # Behavior Parameters
-FORWARD_SPEED = 2               # default linear speed when going forward
+FORWARD_SPEED = 1               # default linear speed when going forward
 SEEK_FORCE = 0.5                # max seek force
-THRESHOLD_TARGET = SCREEN_WIDTH*0.1 
+THRESHOLD_TARGET = SCREEN_WIDTH - 50 
 MASS = 10                       # Drone Mass, used to calculate force
 
 # Colors
@@ -38,6 +45,6 @@ MOUSE_LEFT = 0
 MOUSE_RIGHT = 2
 
 # Rewards
-REWARD_STEP = -1
-REWARD_DISCONNECTED = -100
-TIMESTEPS_PER_ITERATION = 1200
+PENALTY_STEP = -1
+PENALTY_DISCONNECTED = -1000
+TIMESTEPS_PER_ITERATION = 600

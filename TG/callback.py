@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 
 from stable_baselines3.common.results_plotter import ts2xy
@@ -15,17 +16,19 @@ class Callback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: (int)
     """
-    def __init__(self, check_freq: int, log_dir: str, verbose=1):
+    def __init__(self, check_freq: int, log_dir: str, verbose=1, suffix=None):
         super(Callback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
-        self.save_path = os.path.join(log_dir, 'best_model')
+        self.save_path = os.path.join(log_dir, 'model')
         self.best_mean_reward = -np.inf
+        self.suffix = suffix
 
     def _init_callback(self) -> None:
         # Create folder if needed
-        if self.save_path is not None:
-            os.makedirs(self.save_path, exist_ok=True)
+        #if self.save_path is not None:
+        #    os.makedirs(self.save_path, exist_ok=True)
+        pass
 
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
@@ -43,8 +46,8 @@ class Callback(BaseCallback):
                     self.best_mean_reward = mean_reward
                     # Example for saving best model
                     if self.verbose > 0:
-                        print("Saving new best model to {}".format(self.save_path))
-                    self.model.save(self.save_path)
+                        print("Saving new best model to " + self.save_path + "_" + str(self.suffix))
+                    self.model.save(self.save_path + "_" + str(self.suffix))
 
         return True
 

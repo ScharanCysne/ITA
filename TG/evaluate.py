@@ -1,6 +1,5 @@
 import sys
 import pygame
-import supersuit as ss
 
 from interface                          import Interface
 from constants                          import *
@@ -8,18 +7,20 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
-NUM_DRONES = 3
-NUM_OBSTACLES = 20
-NUM_EPISODES = 10000
-NUM_TIMESTEPS = 1
+NUM_DRONES = 5
+NUM_OBSTACLES = 50
+NUM_EPISODES = 10
+NUM_TIMESTEPS = 10000
 
 # Test Env Variables
 ENABLE_TARGET = False
 ENABLE_OBSTACLES = True
 
 # Load Model
-#model = PPO.load(f"output/policy_{NUM_DRONES}_{NUM_TIMESTEPS}_{ENABLE_TARGET}_{ENABLE_OBSTACLES}")
-model = PPO.load(f"tmp/model")
+model = PPO.load(f"tmp/model_5_10000")
+#model = PPO.load(f"model_b_3")
+#model = PPO.load(f"model_b_5")
+#model = PPO.load(f"model_b_20")
 
 # Creation of Environment
 env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES, ENABLE_TARGET, ENABLE_OBSTACLES)

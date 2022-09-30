@@ -17,11 +17,11 @@ class Interface(object):
         # Flow Chart
         #self.flow = FlowField(resolution)
         # Drones' start srea
-        self.start_area = pygame.Surface((SCREEN_WIDTH*0.1, SCREEN_HEIGHT))
+        self.start_area = pygame.Surface((50*RATIO, SCREEN_HEIGHT))
         self.start_area.set_alpha(50)
         pygame.draw.rect(self.start_area, BLUE, self.start_area.get_rect(), 1)
         # Drones' end area
-        self.end_area = pygame.Surface((SCREEN_WIDTH*0.1, SCREEN_HEIGHT))
+        self.end_area = pygame.Surface((50, SCREEN_HEIGHT))
         self.end_area.set_alpha(50)
         pygame.draw.rect(self.end_area, BLUE, self.end_area.get_rect(), 1)
         # Simulation Time
@@ -36,7 +36,7 @@ class Interface(object):
         # Starting area
         self.screen.blit(self.start_area, (0, 0))                
         # Ending area
-        self.screen.blit(self.end_area, (SCREEN_WIDTH*0.9, 0))   
+        self.screen.blit(self.end_area, (SCREEN_WIDTH - 50, 0))   
         # Flow Chart
         #self.flow.draw(self.screen)                              
         # Drone field of vision
@@ -66,16 +66,16 @@ class Interface(object):
         
     def draw_obstacles(self, obstacles):
         for coordinate in obstacles: 
-            pygame.draw.circle(self.screen, RED, coordinate, radius=RADIUS_OBSTACLES//4, width=20)
-            pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES, width=1)
+            pygame.draw.circle(self.screen, RED, RATIO * coordinate, radius=SIZE_OBSTACLES, width=20)
+            pygame.draw.circle(self.screen, BLACK, RATIO * coordinate, radius=RATIO * AVOID_DISTANCE, width=1)
             #pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
 
     def draw_connections(self, swarm, num_agents, state):
         for i in range(num_agents):
             for j in range(i+1, num_agents):
                 if state.adjacencyMatrix[i][j]:
-                    pos_i = swarm[i].location
-                    pos_j = swarm[j].location
+                    pos_i = RATIO * swarm[i].location
+                    pos_j = RATIO * swarm[j].location
                     pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)
 
     def draw_drones(self, swarm):
@@ -84,13 +84,13 @@ class Interface(object):
             drone.draw(self.screen) 
             # writes drone id
             img = self.font20.render(f'Drone {drone.id}', True, BLACK)
-            self.screen.blit(img, drone.location + (0,20))
+            self.screen.blit(img, RATIO * drone.location + (0,20))
             # writes drone current position in column and row
             p = drone.location
             col = p.x // RESOLUTION + 1
             row = p.y // RESOLUTION + 1
             img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
-            self.screen.blit(img, drone.location + (0,35))
+            self.screen.blit(img, RATIO * drone.location + (0,35))
 
     def draw_observable_area(self, swarm, drone, state, num_agents):
         paintable = set()
@@ -111,15 +111,15 @@ class Interface(object):
     def paint_observable_area(self, swarm, drone):
         for drone in swarm:
             #pos = swarm[drone].location
-            pos = drone.location
-            pygame.draw.circle(self.screen, LIGHT_YELLOW, pos, radius=OBSERVABLE_RADIUS)
+            pos = RATIO * drone.location
+            pygame.draw.circle(self.screen, LIGHT_YELLOW, pos, radius=RATIO*OBSERVABLE_RADIUS)
 
     def draw_field_vectors(self, drones, obstacles):
         for drone in drones:
-            pos_i = drone.location
+            pos_i = RATIO * drone.location
             # Obstacles vector
-            pos_j = drone.location + drone.obstacles * OBSERVABLE_RADIUS // 4
+            pos_j = RATIO * drone.location + RATIO * drone.obstacles * OBSERVABLE_RADIUS // 4
             pygame.draw.line(self.screen, RED, pos_i, pos_j, 1)
             # Neighbors vector
-            pos_j = drone.location + drone.neighbors * OBSERVABLE_RADIUS // 4
+            pos_j = RATIO * drone.location + RATIO * drone.neighbors * OBSERVABLE_RADIUS // 4
             pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)

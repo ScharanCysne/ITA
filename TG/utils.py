@@ -1,4 +1,5 @@
 import copy
+import math
 import numpy as np
 import pygame
 import random
@@ -99,3 +100,8 @@ class FlowField():
             for y in range(0, SCREEN_HEIGHT, blockSize):
                 rect = pygame.Rect(x, y, blockSize, blockSize)
                 pygame.draw.rect(screen, (200, 200, 200), rect, 1)
+
+def intersection(drone_i, drone_j):
+    d = (drone_i.location - drone_j.location).magnitude()
+    d1 = d / 2
+    return 2 * OBSERVABLE_RADIUS**2 * math.acos(d1/OBSERVABLE_RADIUS) - d1 * math.sqrt(OBSERVABLE_RADIUS**2 - d1**2)

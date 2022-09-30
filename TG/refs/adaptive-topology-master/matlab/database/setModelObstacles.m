@@ -43,10 +43,10 @@ param.obstacleN = 100;
 
 param.minDistObstacle=2;
 
-param.lowerX= param.area + 5;
-param.upperX= param.area * 10;
+param.lowerX= param.area + 5;   % 55
+param.upperX= param.area * 10;  % 500
 
-param.lowerY= param.lowerB;
-param.upperY= param.upperB;
+param.lowerY= param.lowerB;     % 1
+param.upperY= param.upperB;     % 50
 
 save([param.path 'setup'], 'param');

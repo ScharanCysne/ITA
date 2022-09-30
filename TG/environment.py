@@ -1,13 +1,13 @@
+import math
 import time
 import pygame 
-import random
 import scipy.io
 import numpy as np
 import functools
 
-from constants        import TIME_MAX_SIMULATION
-from gym              import spaces, spec
-from utils            import distance
+from constants        import *
+from gym              import spaces
+from utils            import distance, intersection
 from drone            import Drone
 from constants        import SAMPLE_TIME, SCREEN_WIDTH, SCREEN_HEIGHT, OBSERVABLE_RADIUS, FREQUENCY
 from pettingzoo       import ParallelEnv
@@ -67,6 +67,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.num_obstacles = num_obstacles
         self.env_state = State(num_agents)
         self.cummulative_rewards = { agent:0 for agent in self.possible_agents }
+        self.target_algebraic_connectivity = 0
 
 
     @functools.lru_cache(maxsize=None)
@@ -108,7 +109,7 @@ class CoverageMissionEnv(ParallelEnv):
             self.drones[id].scan_neighbors(neighbors_positions)
             self.drones[id].scan_obstacles(obstacles_positions)
             self.drones[id].calculate_potential_field(neighbors_positions, obstacles_positions) 
-            self.drones[id].execute(action, self.enable_target)
+            self.drones[id].execute(action, obstacles_positions, self.enable_target)
             
         # 2. Update swarm state
         self.env_state.update_state(self.drones)
@@ -120,7 +121,7 @@ class CoverageMissionEnv(ParallelEnv):
         dones = self.env_state.check_completion(self.agents, self.agents_mapping, self.time_executing)
 
         # 5. Calculate rewards
-        rewards = self.env_state.calculate_rewards(self.agents, self.agents_mapping)
+        rewards = self.env_state.calculate_rewards(self.agents, self.agents_mapping, observations, self.target_algebraic_connectivity)
 
         infos = {agent: {} for agent in self.agents}
 
@@ -166,7 +167,6 @@ class CoverageMissionEnv(ParallelEnv):
         return self.drones, self.obstacles, self.env_state, self.num_agents, self.time_executing
         
 
-
     def monitor(self, dones, rewards):
         # Update episode cummulative reward
         for agent in rewards:
@@ -199,11 +199,13 @@ class CoverageMissionEnv(ParallelEnv):
         self.drones = []
         self.agents_mapping = dict()
         # Load initial positions
-        mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/position.mat')
-        initial_positions = self.rescale(mat["position"], True)
+        index = 4#np.random.randint(1,200)
+        positions = scipy.io.loadmat(f'model/positions/{index}/position.mat')["position"]
+        properties = scipy.io.loadmat(f'model/positions/{index}/properties.mat')['properties']
+        self.target_algebraic_connectivity = properties[0][4]
         # Create N Drones
         for index in range(self.num_agents):
-            drone = Drone(initial_positions[index][0], initial_positions[index][1], index)
+            drone = Drone(positions[index][0], positions[index][1], index)
             self.drones.append(drone)
             self.agents_mapping[drone.name] = drone
 
@@ -216,28 +218,12 @@ class CoverageMissionEnv(ParallelEnv):
 
     def generate_obstacles(self, deterministic=True):
         self.obstacles = []
-        if deterministic and self.enable_obstacles:
+        if self.enable_obstacles:
             mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
-            obstacles_positions = self.rescale(mat["obstacles"], False)
+            obstacles_positions = mat["obstacles"]
             for index in range(len(obstacles_positions)):
                 self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
-        elif self.enable_obstacles:
-            for _ in range(self.num_obstacles):
-                pos_x = random.uniform(SCREEN_WIDTH*0.1, SCREEN_WIDTH*0.9)
-                pos_y = random.uniform(0, SCREEN_HEIGHT)
-                self.obstacles.append(pygame.math.Vector2(pos_x, pos_y)) 
-
-
-    def rescale(self, positions, agent=True):
-        pos_max_y = max([position[1] for position in positions])
-        ratio = self.height / pos_max_y 
-        for position in positions:
-            position[0] *= ratio / 2 
-            position[1] *= ratio / 2  
-            if agent:
-                position[1] += SCREEN_HEIGHT // 4
-        return positions
-
+        
 
     def get_obstacles(self):
         return self.obstacles
@@ -256,15 +242,35 @@ class State:
         self.adjacencyMatrix = np.zeros((num_agents,num_agents))
         self.degreeMatrix = np.zeros((num_agents,num_agents))
         self.laplacianMatrix = np.zeros((num_agents,num_agents))
-        self.connectivity = 0
+        self.algebraic_connectivity = 0
         # Global state
         self.network_connectivity = 0
         self.network_robustness = 0
+        self.network_coverage = 0
+        self.possible_coverage = num_agents * math.pi * OBSERVABLE_RADIUS**2
         self.cm = 0
 
 
     def update_state(self, agents):
         self.agents = agents
+        # Update graph robustness
+        self.calculate_robustness(agents)
+        # Update graph connectivity
+        self.calculate_connectivity(agents)
+        # Update graph area coverage
+        self.calculate_coverage(agents)
+        # Update CM of topology
+        self.cm = self.calculate_center(agents)
+
+
+    def calculate_center(self, agents):
+        cm = pygame.Vector2(0,0)
+        for agent in agents:
+            cm += agent.location 
+        return cm / len(agents)
+
+
+    def calculate_connectivity(self, agents):
         for i in range(self.num_agents):
             for j in range(i+1, self.num_agents):
                 connected = distance(agents[i], agents[j]) < OBSERVABLE_RADIUS
@@ -277,17 +283,38 @@ class State:
         self.laplacianMatrix = self.degreeMatrix - self.adjacencyMatrix
         eigenvalues, _ = np.linalg.eig(self.laplacianMatrix)
         eigenvalues.sort()
-        self.connectivity = 1 #eigenvalues[1]
-        self.network_connectivity = 1 if self.connectivity else 0
-        # Update CM of topology
-        cm = pygame.math.Vector2(0,0)
-        for agent in agents:
-            cm += agent.location
-        cm /= len(agents)
-        self.cm = cm
+        self.algebraic_connectivity = eigenvalues[1] if type(eigenvalues[1]) == np.float64 else 0
+        self.network_connectivity = 1 if self.algebraic_connectivity > 10e-3 else 0
 
 
-    def isConnected(self, i, j):
+    def calculate_robustness(self, agents):
+        pass
+
+
+    def calculate_coverage(self, agents):
+        # compute the bounding box of the circles
+        x_min = min(agent.location[0] - OBSERVABLE_RADIUS for agent in agents)
+        x_max = min(agent.location[0] + OBSERVABLE_RADIUS for agent in agents)
+        y_min = min(agent.location[1] - OBSERVABLE_RADIUS for agent in agents)
+        y_max = min(agent.location[1] + OBSERVABLE_RADIUS for agent in agents)
+        # Precision
+        box_side = 40
+        # Size of bounding box
+        dx = (x_max - x_min) / box_side
+        dy = (y_max - y_min) / box_side
+        # Count of small blocks
+        count = 0
+
+        for r in range(box_side):
+            y = y_min + r * dy
+            for c in range(box_side):
+                x = x_min + c * dx
+                if any((agent.location - pygame.math.Vector2(x,y)).magnitude() <= OBSERVABLE_RADIUS for agent in agents):
+                    count += 1
+        self.network_coverage = count * dx * dy
+
+
+    def is_connected(self, i, j):
         return self.adjacencyMatrix[i][j]
 
 
@@ -297,7 +324,7 @@ class State:
             agent = agents_mapping[name]
             self.observations[agent.name] = agent.get_state() if agent.alive else None
             self.observations[agent.name][2] = self.network_robustness / 100
-            self.observations[agent.name][3] = self.network_connectivity / 100
+            self.observations[agent.name][3] = self.algebraic_connectivity / self.num_agents
         return self.observations
 
 
@@ -309,20 +336,30 @@ class State:
         #        env_done = False
         if time_executing > TIME_MAX_SIMULATION:
             env_done = True 
+        if self.network_connectivity == 0:
+            env_done = True 
         dones = {agent : env_done for agent in alive_agents}
         return dones
 
     
-    def calculate_rewards(self, alive_agents, agents_mapping):
+    def calculate_rewards(self, alive_agents, agents_mapping, states, target_connectivity):
         rewards = dict()
-        target = pygame.math.Vector2(0,0)
         for name in alive_agents:
             agent = agents_mapping[name]
-            #rewards[agent.name] = -0.1                                           # Individual Rate of completition
-            #rewards[agent.name] = agent.location[0] / self.target               # Individual Rate of completition
-            #rewards[agent.name] += self.cm[0] / self.target                     # Group Rate of completition
-            #rewards[agent.name] = 0 if self.network_connectivity else -100       # Connectivity
-            #if self.cm[0] > 0.9 * self.target:
-            #    rewards[agent.name] += 100 
-            rewards[agent.name] = -(agent.location - target).magnitude() / SCREEN_WIDTH
+            # Coverage Controller - try to maximize coverage area
+            rewards[name] = self.network_coverage / self.possible_coverage / self.num_agents
+            # Connectivity Controller
+            if self.network_connectivity == 1: 
+                # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
+                if self.algebraic_connectivity >= target_connectivity:
+                    # Reward if above threshold
+                    rewards[name] += 1
+                else:
+                    # Neutral Reward if connected, but not as high if above threshold
+                    rewards[name] += 0 
+            else:
+                rewards[name] += PENALTY_DISCONNECTED / self.num_agents
+            # Walking in border penalty
+            if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
+                rewards[name] += PENALTY_STEP
         return rewards
