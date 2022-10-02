@@ -7,7 +7,7 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
-NUM_DRONES = 5
+NUM_DRONES = 3
 NUM_OBSTACLES = 50
 NUM_EPISODES = 10
 NUM_TIMESTEPS = 10000
@@ -17,7 +17,7 @@ ENABLE_TARGET = False
 ENABLE_OBSTACLES = True
 
 # Load Model
-model = PPO.load(f"tmp/model_5_10000")
+model = PPO.load(f"tmp/model_5_5000")
 #model = PPO.load(f"model_b_3")
 #model = PPO.load(f"model_b_5")
 #model = PPO.load(f"model_b_20")

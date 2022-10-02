@@ -25,7 +25,7 @@ FREQUENCY = 60.0                # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY   # simulation sample time
 
 # Behavior Parameters
-FORWARD_SPEED = 1               # default linear speed when going forward
+FORWARD_SPEED = 0.6               # default linear speed when going forward
 SEEK_FORCE = 0.5                # max seek force
 THRESHOLD_TARGET = SCREEN_WIDTH - 50 
 MASS = 10                       # Drone Mass, used to calculate force
@@ -47,4 +47,4 @@ MOUSE_RIGHT = 2
 # Rewards
 PENALTY_STEP = -1
 PENALTY_DISCONNECTED = -1000
-TIMESTEPS_PER_ITERATION = 600
+TIMESTEPS_PER_EPISODE = 600

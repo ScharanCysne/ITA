@@ -55,6 +55,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(num_agents)))
         )
+        self.num_drones = num_agents
         
         # Environment constraints
         self.width = SCREEN_WIDTH
@@ -73,13 +74,13 @@ class CoverageMissionEnv(ParallelEnv):
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         # Define state space (pos_x, pos_y, vulnerability, connectivity, obstacles_x, obstacles_y, neighbors_x, neighbors_y)
-        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.ones(self.N_SPACE), dtype=np.float64)
+        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.array([10]*self.N_SPACE), dtype=np.float64)
 
-
+    
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
         # Define action space (vel_x, vel_y)
-        return spaces.Box(low=np.array([0, 0]), high=np.array([2, 2]), dtype=np.float64)
+        return spaces.Box(low=np.array([0, 0]), high=np.array([1, 1]), dtype=np.float64)
 
 
     def step(self, actions: dict):
@@ -109,7 +110,7 @@ class CoverageMissionEnv(ParallelEnv):
             self.drones[id].scan_neighbors(neighbors_positions)
             self.drones[id].scan_obstacles(obstacles_positions)
             self.drones[id].calculate_potential_field(neighbors_positions, obstacles_positions) 
-            self.drones[id].execute(action, obstacles_positions, self.enable_target)
+            self.drones[id].execute(action, obstacles_positions, self.drones, self.enable_target)
             
         # 2. Update swarm state
         self.env_state.update_state(self.drones)
@@ -199,7 +200,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.drones = []
         self.agents_mapping = dict()
         # Load initial positions
-        index = 4#np.random.randint(1,200)
+        index = 18 #np.random.randint(1,200)
         positions = scipy.io.loadmat(f'model/positions/{index}/position.mat')["position"]
         properties = scipy.io.loadmat(f'model/positions/{index}/properties.mat')['properties']
         self.target_algebraic_connectivity = properties[0][4]
@@ -322,18 +323,18 @@ class State:
         self.observations = dict()
         for name in alive_agents:
             agent = agents_mapping[name]
-            self.observations[agent.name] = agent.get_state() if agent.alive else None
-            self.observations[agent.name][2] = self.network_robustness / 100
-            self.observations[agent.name][3] = self.algebraic_connectivity / self.num_agents
+            self.observations[name] = agent.get_state() if agent.alive else None
+            self.observations[name][2] = self.network_robustness / 100
+            self.observations[name][3] = self.algebraic_connectivity / self.num_agents
         return self.observations
 
 
     def check_completion(self, alive_agents, agents_mapping, time_executing):
         dones = dict()
         env_done = False
-        #for name in alive_agents:
-        #    if not agents_mapping[name].reached_goal():
-        #        env_done = False
+        for name in alive_agents:
+            if not agents_mapping[name].reached_goal():
+                env_done = False
         if time_executing > TIME_MAX_SIMULATION:
             env_done = True 
         if self.network_connectivity == 0:
@@ -346,20 +347,23 @@ class State:
         rewards = dict()
         for name in alive_agents:
             agent = agents_mapping[name]
-            # Coverage Controller - try to maximize coverage area
-            rewards[name] = self.network_coverage / self.possible_coverage / self.num_agents
             # Connectivity Controller
             if self.network_connectivity == 1: 
+                # Coverage Controller - try to maximize coverage area
+                rewards[name] = self.network_coverage / self.possible_coverage / self.num_agents
+                # Try to maintain delta in y axis - not to form a line
+                # rewards[name] += abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
                 # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
                 if self.algebraic_connectivity >= target_connectivity:
                     # Reward if above threshold
-                    rewards[name] += 1
+                    rewards[name] += 0.1 / self.num_agents
                 else:
                     # Neutral Reward if connected, but not as high if above threshold
-                    rewards[name] += 0 
+                    rewards[name] += 0.001 
             else:
-                rewards[name] += PENALTY_DISCONNECTED / self.num_agents
+                rewards[name] = PENALTY_DISCONNECTED / self.num_agents
             # Walking in border penalty
             if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
                 rewards[name] += PENALTY_STEP
+        
         return rewards
