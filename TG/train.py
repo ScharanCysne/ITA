@@ -8,11 +8,12 @@ from environment                                import CoverageMissionEnv
 from stable_baselines3                          import PPO
 from stable_baselines3.common.policies          import ActorCriticPolicy
 from stable_baselines3.common.results_plotter   import plot_results, X_TIMESTEPS
+from supersuit.utils.wrapper_chooser            import WrapperChooser
 
 # Training Parameters
-NUM_DRONES = 3
+NUM_DRONES = 4
 NUM_OBSTACLES = 50
-NUM_EPISODES = 5000
+NUM_EPISODES = 5
 TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * NUM_DRONES
 
 print(" ----------------------------------------- ")
@@ -36,20 +37,20 @@ env = ss.concat_vec_envs_v1(env, 1, num_cpus=8, base_class='stable_baselines3')
 suffix = str(NUM_DRONES) + "_" + str(NUM_EPISODES)
 callback = Callback(check_freq=TIMESTEPS_PER_EPISODE, log_dir=log_dir, suffix=suffix)
 
-# Creation of PPO Multi-Agent model
-model = PPO(
-    ActorCriticPolicy,
-    env,
-    verbose=1,
-    device="cuda",
-    n_steps=TIMESTEPS_PER_EPISODE,
-    batch_size=60,
-    learning_rate=0.0003/NUM_DRONES,
-    policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
-)
+# # Creation of PPO Multi-Agent model
+# model = PPO(
+#     ActorCriticPolicy,
+#     env,
+#     verbose=1,
+#     device="cuda",
+#     n_steps=TIMESTEPS_PER_EPISODE,
+#     batch_size=60,
+#     learning_rate=0.0003/NUM_DRONES,
+#     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
+# )
 
-#model = PPO.load(f"model_b_2")
-#model.set_env(env)
+model = PPO.load(f"output/policy_3_5")
+model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)
 model.save(f"output/policy_{NUM_DRONES}_{NUM_EPISODES}")

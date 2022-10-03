@@ -7,13 +7,13 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
-NUM_DRONES = 2
+NUM_DRONES = 3
 NUM_OBSTACLES = 50
 NUM_EPISODES = 10
 NUM_TIMESTEPS = 10000
 
 # Load Model
-model = PPO.load(f"model_b_2")
+model = PPO.load(f"output/policy_4_5")
 #model = PPO.load(f"model_b_3")
 #model = PPO.load(f"model_b_5")
 #model = PPO.load(f"model_b_20")
@@ -42,8 +42,8 @@ for episode in range(NUM_EPISODES):
         
         # Draws at every dt
         interface.clock.tick(FREQUENCY)
-        swarm, obstacles, env_state, num_swarm, time_executing = env.render()
-        interface.draw(swarm, obstacles, env_state, num_swarm, episode_time, time_executing, record)
+        agents, obstacles, env_state, num_agents, time_executing = env.render()
+        interface.draw(agents, obstacles, env_state, num_agents, episode_time, time_executing, record)
         # Get Pygame Events 
         for event in pygame.event.get():
             # Qui Event

@@ -28,10 +28,12 @@ class Interface(object):
         self.sim_time = self.font24.render(f"Time: 0.00s", True, BLACK)
         self.timesteps = 0
 
-    def draw(self, swarm, obstacles, env_state, num_swarm, out_time, time_executing, record=False):
-        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time, time_executing, record)
 
-    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[], time_executing=0, record=False):
+    def draw(self, agents, obstacles, env_state, num_agents, out_time, time_executing, record=False):
+        self.update_screen(agents, obstacles, env_state, num_agents, out_time, time_executing, record)
+
+
+    def update_screen(self, agents=dict(), obstacles=[], state=None, num_agents=0, out_time=[], time_executing=0, record=False):
         self.timesteps += 1
         # Background
         self.screen.fill(LIGHT_GRAY)                             
@@ -42,15 +44,15 @@ class Interface(object):
         # Flow Chart
         #self.flow.draw(self.screen)                              
         # Drone field of vision
-        self.draw_observable_area(swarm, 4, state, num_agents)       
+        self.draw_observable_area(agents)       
         # Obstacles
         self.draw_obstacles(obstacles)                           
         # Connections
-        self.draw_connections(swarm, num_agents, state)          
+        self.draw_connections(agents, state)          
         # Drones
-        self.draw_drones(swarm)  
+        self.draw_drones(agents)  
         # Field vectors
-        self.draw_field_vectors(swarm, obstacles)                                
+        self.draw_field_vectors(agents)                                
         # Running Time
         self.sim_time = self.font24.render(f"Time: {time_executing:.2f} s", True, BLACK)
         self.screen.blit(self.sim_time, (1700, 20))   
@@ -69,22 +71,27 @@ class Interface(object):
         if record:
             pygame.image.save(self.screen, f"replay/screenshot_{self.timesteps}.jpeg")
         
+
     def draw_obstacles(self, obstacles):
         for coordinate in obstacles: 
             pygame.draw.circle(self.screen, RED, RATIO * coordinate, radius=SIZE_OBSTACLES, width=20)
             pygame.draw.circle(self.screen, BLACK, RATIO * coordinate, radius=RATIO * AVOID_DISTANCE, width=1)
             #pygame.draw.circle(self.screen, BLACK, coordinate, radius=RADIUS_OBSTACLES*1.6 + AVOID_DISTANCE, width=1)
 
-    def draw_connections(self, swarm, num_agents, state):
+
+    def draw_connections(self, agents, state):
+        drones = list(agents.values())
+        num_agents = len(drones)
         for i in range(num_agents):
             for j in range(i+1, num_agents):
                 if state.adjacencyMatrix[i][j]:
-                    pos_i = RATIO * swarm[i].location
-                    pos_j = RATIO * swarm[j].location
+                    pos_i = RATIO * drones[i].location
+                    pos_j = RATIO * drones[j].location
                     pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)
 
-    def draw_drones(self, swarm):
-        for drone in swarm:
+
+    def draw_drones(self, agents):
+        for drone in agents.values():
             # Draw drone's position            
             drone.draw(self.screen) 
             # writes drone id
@@ -97,30 +104,16 @@ class Interface(object):
             img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
             self.screen.blit(img, RATIO * drone.location + (0,35))
 
-    def draw_observable_area(self, swarm, drone, state, num_agents):
-        paintable = set()
-        hops = list()
-        #for i in range(num_agents):
-        #    if state.adjacencyMatrix[drone][i]:
-        #        hops.append(i)
-        #        paintable.add(i)
-        #for neighbor in hops:
-        #    for i in range(num_agents):
-        #        if state.adjacencyMatrix[neighbor][i]:
-        #            paintable.add(i)
-        paintable.add(drone)
 
-        for drone in paintable:
-            self.paint_observable_area(swarm, drone)        
-
-    def paint_observable_area(self, swarm, drone):
-        for drone in swarm:
-            #pos = swarm[drone].location
+    def draw_observable_area(self, agents):
+        for drone in agents.values():
+            #pos = agents[drone].location
             pos = RATIO * drone.location
             pygame.draw.circle(self.screen, LIGHT_YELLOW, pos, radius=RATIO*OBSERVABLE_RADIUS)
 
-    def draw_field_vectors(self, drones, obstacles):
-        for drone in drones:
+
+    def draw_field_vectors(self, agents):
+        for drone in agents.values():
             pos_i = RATIO * drone.location
             # Obstacles vector
             pos_j = RATIO * drone.location + RATIO * drone.obstacles 

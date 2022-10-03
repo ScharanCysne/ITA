@@ -35,7 +35,7 @@ class Drone():
 
 
     def reached_goal(self):
-        self.reached = self.target - self.location[0] <= THRESHOLD_TARGET
+        self.reached = THRESHOLD_TARGET < self.location[0]
         return self.reached
 
 
@@ -59,8 +59,8 @@ class Drone():
         for obs in obstacles:
             if (next_position - obs).magnitude() < AVOID_DISTANCE:
                 action = pygame.math.Vector2(0,0)
-        for agent in agents:
-            if agent.id != self.id and (next_position - agent.location).magnitude() < AVOID_DISTANCE:
+        for drone in agents.values():
+            if drone.id != self.id and (next_position - drone.location).magnitude() < AVOID_DISTANCE:
                 action = pygame.math.Vector2(0,0)
         self.velocity += action
         # Limit velocity
