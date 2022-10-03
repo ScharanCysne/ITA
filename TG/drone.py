@@ -110,14 +110,14 @@ class Drone():
         v = pygame.math.Vector2(0,0) 
         for position in positions:
             distance = (position - self.location).magnitude()
-            if 0 < distance: # < OBSERVABLE_RADIUS:
+            if 0 < distance < OBSERVABLE_RADIUS:
                 # Get normalized direction of neighbor 
-                direction = (position - self.location).normalize() 
+                direction = position - self.location 
                 # Proporcional to the distance. The closer the stronger needs to be
-                direction = direction / distance 
-                v += 5 * direction
+                #direction = direction / distance 
+                v += direction
         # This gives the direction of the resulting potential 
-        self.neighbors = v.copy()
+        self.neighbors = v.copy() / (len(positions) - 1)
                   
 
     def scan_obstacles(self, positions):
@@ -131,13 +131,14 @@ class Drone():
         v = pygame.math.Vector2(0,0) 
         for position in positions:
             distance = (position - self.location).magnitude()
-            if 0 < distance < mindistance and self.location[0] < position[0]: # < OBSERVABLE_RADIUS:
-                mindistance = distance
-                # Get normalized direction of neighbor 
-                direction = (position - self.location).normalize() 
-                # Proporcional to the distance. The closer the stronger needs to be
-                direction = direction / sqrt(distance) 
-                v = 5 * direction
+            if 0 < distance < OBSERVABLE_RADIUS and self.location[0] < position[0]:
+                if distance < mindistance:
+                    mindistance = distance
+                    # Get normalized direction of neighbor 
+                    direction = position - self.location 
+                    # Proporcional to the distance. The closer the stronger needs to be
+                    #direction = direction / sqrt(distance) 
+                    v = direction
         # This gives the direction of the resulting potential 
         self.obstacles = v.copy()
 
@@ -152,7 +153,7 @@ class Drone():
             distance = (self.location - position).magnitude()
             if 0 < distance < OBSERVABLE_RADIUS:
                 # Proporcional to the distance. The closer the stronger needs to be
-                f_repulsion = 2*(position - self.location).normalize() / distance 
+                f_repulsion = (position - self.location).normalize() / distance 
                 #f_repulsion = derivativeBivariate(alpha, beta, position, self.location) / SAMPLE_TIME
                 #f_repulsion = limit(f_repulsion, SEEK_FORCE)
                 self.applyForce(-f_repulsion)
@@ -162,14 +163,14 @@ class Drone():
             distance = (self.location - position).magnitude()
             if 0 < distance < OBSERVABLE_RADIUS:
                 # Proporcional to the distance. The closer the stronger needs to be
-                f_repulsion = (position - self.location).normalize() / distance
+                f_repulsion = 2*(position - self.location).normalize() / sqrt(distance)
                 #f_repulsion = derivativeBivariate(alpha, beta, position, self.location) / SAMPLE_TIME
                 #f_repulsion = limit(f_repulsion, SEEK_FORCE)
                 self.applyForce(-f_repulsion)
 
             # Avoids that the drone goes over the obstacle
-            if (distance < AVOID_DISTANCE):
-                self.velocity *= -1
+            #if (distance < AVOID_DISTANCE):
+            #    self.velocity *= -1
 
 
     def get_state(self):
@@ -191,3 +192,4 @@ class Drone():
         """
         # usar sprite para desenhar drone
         pygame.draw.circle(window, BLUE, RATIO * self.location, radius=SIZE_DRONE, width=20)
+        pygame.draw.circle(window, BLACK, RATIO * self.location, radius=RATIO * AVOID_DISTANCE, width=1)

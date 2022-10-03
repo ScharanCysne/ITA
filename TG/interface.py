@@ -13,7 +13,7 @@ class Interface(object):
         self.clock = pygame.time.Clock()
 
         # Title
-        self.title = self.font24.render('Deep Reinforcement Learning for Drones in Coverage Missions', True, BLACK)
+        self.title = self.font24.render('MARL for UAVs in Coverage Missions', True, BLACK)
         # Flow Chart
         #self.flow = FlowField(resolution)
         # Drones' start srea
@@ -26,11 +26,13 @@ class Interface(object):
         pygame.draw.rect(self.end_area, BLUE, self.end_area.get_rect(), 1)
         # Simulation Time
         self.sim_time = self.font24.render(f"Time: 0.00s", True, BLACK)
+        self.timesteps = 0
 
-    def draw(self, swarm, obstacles, env_state, num_swarm, out_time, time_executing):
-        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time, time_executing)
+    def draw(self, swarm, obstacles, env_state, num_swarm, out_time, time_executing, record=False):
+        self.update_screen(swarm, obstacles, env_state, num_swarm, out_time, time_executing, record)
 
-    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[], time_executing=0):
+    def update_screen(self, swarm=[], obstacles=[], state=None, num_agents=0, out_time=[], time_executing=0, record=False):
+        self.timesteps += 1
         # Background
         self.screen.fill(LIGHT_GRAY)                             
         # Starting area
@@ -51,7 +53,7 @@ class Interface(object):
         self.draw_field_vectors(swarm, obstacles)                                
         # Running Time
         self.sim_time = self.font24.render(f"Time: {time_executing:.2f} s", True, BLACK)
-        self.screen.blit(self.sim_time, (1490, 20))   
+        self.screen.blit(self.sim_time, (1700, 20))   
         # Title
         self.screen.blit(self.title, (20, 20))
         # Print time of each iteration
@@ -63,6 +65,9 @@ class Interface(object):
             self.screen.blit(img, (20, 20*(idx+2)))
         # Flip screen
         pygame.display.flip()
+        # Record option
+        if record:
+            pygame.image.save(self.screen, f"replay/screenshot_{self.timesteps}.jpeg")
         
     def draw_obstacles(self, obstacles):
         for coordinate in obstacles: 
@@ -118,8 +123,8 @@ class Interface(object):
         for drone in drones:
             pos_i = RATIO * drone.location
             # Obstacles vector
-            pos_j = RATIO * drone.location + RATIO * drone.obstacles * OBSERVABLE_RADIUS // 4
+            pos_j = RATIO * drone.location + RATIO * drone.obstacles 
             pygame.draw.line(self.screen, RED, pos_i, pos_j, 1)
             # Neighbors vector
-            pos_j = RATIO * drone.location + RATIO * drone.neighbors * OBSERVABLE_RADIUS // 4
+            pos_j = RATIO * drone.location + RATIO * drone.neighbors 
             pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)

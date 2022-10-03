@@ -10,29 +10,25 @@ from stable_baselines3.common.policies          import ActorCriticPolicy
 from stable_baselines3.common.results_plotter   import plot_results, X_TIMESTEPS
 
 # Training Parameters
-NUM_DRONES = 5
+NUM_DRONES = 3
 NUM_OBSTACLES = 50
 NUM_EPISODES = 5000
 TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * NUM_DRONES
 
-print(" ---------- ")
+print(" ----------------------------------------- ")
 print("Number of Agents: " + str(NUM_DRONES))
 print("Number of Obstacles: " + str(NUM_OBSTACLES))
 print("Number of Episodes: " + str(NUM_EPISODES))
 print("Number of Timesteps per Episode: " + str(TIMESTEPS_PER_EPISODE))
 print("Number of Total Timesteps: " + str(NUM_EPISODES * TIMESTEPS_PER_EPISODE * NUM_DRONES))
-print(" ---------- ")
-
-# Test Env Variables
-ENABLE_TARGET = False
-ENABLE_OBSTACLES = True
+print(" ----------------------------------------- ")
 
 # Create log dir
 log_dir = "tmp/"
 os.makedirs(log_dir, exist_ok=True)
 
 # Creation of Environment
-env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES, ENABLE_TARGET, ENABLE_OBSTACLES)
+env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES)
 env = ss.pettingzoo_env_to_vec_env_v1(env)
 env = ss.concat_vec_envs_v1(env, 1, num_cpus=8, base_class='stable_baselines3')
 
@@ -52,11 +48,11 @@ model = PPO(
     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
 )
 
-# model = PPO.load(f"model_b_5")
-# model.set_env(env)
+#model = PPO.load(f"model_b_2")
+#model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)
-model.save(f"output/policy_{NUM_DRONES}_{NUM_EPISODES}_{ENABLE_TARGET}_{ENABLE_OBSTACLES}")
+model.save(f"output/policy_{NUM_DRONES}_{NUM_EPISODES}")
 
 plot_results([log_dir], TOTAL_TIMESTEPS, X_TIMESTEPS, "PPO CoverageMission")
-plt.savefig(f"output/rewards_{NUM_DRONES}_{NUM_EPISODES}_{ENABLE_TARGET}_{ENABLE_OBSTACLES}")
+plt.savefig(f"output/rewards_{NUM_DRONES}_{NUM_EPISODES}")

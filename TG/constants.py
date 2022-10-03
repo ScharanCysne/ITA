@@ -1,4 +1,3 @@
-
 # Simulation Parameters
 NUM_DRONES = 10                 # Number of simultaneous drones
 SIZE_TRACK = 100
@@ -18,10 +17,10 @@ RESOLUTION = 30                 # of grid
 SIZE_OBSTACLES = 3
 SIZE_DRONE = 3
 RATIO = SCREEN_WIDTH / UPPER_X  # Factor to convert from pixels to meters
-TIME_MAX_SIMULATION = 10        # Time to stop simulation in case the conditions are not completed
+TIME_MAX_SIMULATION = 15        # Time to stop simulation in case the conditions are not completed
 
 # Sample Time Parameters
-FREQUENCY = 60.0                # simulation frequency
+FREQUENCY = 60                  # simulation frequency
 SAMPLE_TIME = 1.0 / FREQUENCY   # simulation sample time
 
 # Behavior Parameters
@@ -46,5 +45,5 @@ MOUSE_RIGHT = 2
 
 # Rewards
 PENALTY_STEP = -1
-PENALTY_DISCONNECTED = -1000
-TIMESTEPS_PER_EPISODE = 600
+PENALTY_DISCONNECTED = -100
+TIMESTEPS_PER_EPISODE = TIME_MAX_SIMULATION * FREQUENCY

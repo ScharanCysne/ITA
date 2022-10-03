@@ -15,7 +15,7 @@ from pettingzoo       import ParallelEnv
 from stable_baselines3.common.monitor import ResultsWriter
 
 writer = ResultsWriter(
-    "tmp/monitor.csv",
+    "tmp/3_5000",
     header={"t_start": 0, "env_id": 0 }
 )
 
@@ -24,7 +24,7 @@ class CoverageMissionEnv(ParallelEnv):
     metadata = {'render.modes': ['human']}
     N_SPACE = 8
 
-    def __init__(self, num_obstacles, num_agents, enable_target=True, enable_obstacles=True):
+    def __init__(self, num_obstacles, num_agents, enable_target=False, enable_obstacles=True):
         """
         The init method takes in environment arguments and define the following attributes:
         - possible_agents
@@ -337,8 +337,8 @@ class State:
                 env_done = False
         if time_executing > TIME_MAX_SIMULATION:
             env_done = True 
-        if self.network_connectivity == 0:
-            env_done = True 
+        #if self.network_connectivity == 0:
+        #    env_done = True 
         dones = {agent : env_done for agent in alive_agents}
         return dones
 
@@ -348,20 +348,20 @@ class State:
         for name in alive_agents:
             agent = agents_mapping[name]
             # Connectivity Controller
-            if self.network_connectivity == 1: 
-                # Coverage Controller - try to maximize coverage area
-                rewards[name] = self.network_coverage / self.possible_coverage / self.num_agents
-                # Try to maintain delta in y axis - not to form a line
-                # rewards[name] += abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
-                # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
-                if self.algebraic_connectivity >= target_connectivity:
-                    # Reward if above threshold
-                    rewards[name] += 0.1 / self.num_agents
-                else:
-                    # Neutral Reward if connected, but not as high if above threshold
-                    rewards[name] += 0.001 
-            else:
-                rewards[name] = PENALTY_DISCONNECTED / self.num_agents
+            # if self.network_connectivity == 1: 
+            # Coverage Controller - try to maximize coverage area
+            #rewards[name] = self.network_coverage / self.possible_coverage / self.num_agents
+            # Try to maintain delta in y axis - not to form a line
+            rewards[name] = abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
+            # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
+            if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
+                # Reward if above threshold
+                rewards[name] += 1 / self.num_agents
+            #elif self.network_connectivity == 1:
+            #    # Neutral Reward if connected, but not as high if above threshold
+            #    rewards[name] += 0.001 
+            #else:
+            #    rewards[name] = PENALTY_DISCONNECTED / self.num_agents
             # Walking in border penalty
             if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
                 rewards[name] += PENALTY_STEP
