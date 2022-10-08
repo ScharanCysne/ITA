@@ -13,7 +13,7 @@ class Interface(object):
         self.clock = pygame.time.Clock()
 
         # Title
-        self.title = self.font24.render('MARL for UAVs in Coverage Missions', True, BLACK)
+        self.title = self.font24.render('Deep RL for UAVs in Coverage Missions', True, BLACK)
         # Flow Chart
         #self.flow = FlowField(resolution)
         # Drones' start srea
@@ -47,12 +47,12 @@ class Interface(object):
         self.draw_observable_area(agents)       
         # Obstacles
         self.draw_obstacles(obstacles)                           
+        # Field vectors
+        self.draw_field_vectors(agents)                                
         # Connections
         self.draw_connections(agents, state)          
         # Drones
         self.draw_drones(agents)  
-        # Field vectors
-        self.draw_field_vectors(agents)                                
         # Running Time
         self.sim_time = self.font24.render(f"Time: {time_executing:.2f} s", True, BLACK)
         self.screen.blit(self.sim_time, (1700, 20))   
@@ -95,14 +95,14 @@ class Interface(object):
             # Draw drone's position            
             drone.draw(self.screen) 
             # writes drone id
-            img = self.font20.render(f'Drone {drone.id}', True, BLACK)
-            self.screen.blit(img, RATIO * drone.location + (0,20))
+            #img = self.font20.render(f'Drone {drone.id}', True, BLACK)
+            #self.screen.blit(img, RATIO * drone.location + (20,0))
             # writes drone current position in column and row
-            p = drone.location
-            col = p.x // RESOLUTION + 1
-            row = p.y // RESOLUTION + 1
-            img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
-            self.screen.blit(img, RATIO * drone.location + (0,35))
+            #p = drone.location
+            #col = p.x // RESOLUTION + 1
+            #row = p.y // RESOLUTION + 1
+            #img = self.font20.render(f'Pos:{col},{row}', True, BLUE)
+            #self.screen.blit(img, RATIO * drone.location + (0,35))
 
 
     def draw_observable_area(self, agents):
@@ -120,4 +120,4 @@ class Interface(object):
             pygame.draw.line(self.screen, RED, pos_i, pos_j, 1)
             # Neighbors vector
             pos_j = RATIO * drone.location + RATIO * drone.neighbors 
-            pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)
+            pygame.draw.line(self.screen, LIGHT_GRAY, pos_i, pos_j, 1)

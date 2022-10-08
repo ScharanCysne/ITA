@@ -8,13 +8,12 @@ from environment                                import CoverageMissionEnv
 from stable_baselines3                          import PPO
 from stable_baselines3.common.policies          import ActorCriticPolicy
 from stable_baselines3.common.results_plotter   import plot_results, X_TIMESTEPS
-from supersuit.utils.wrapper_chooser            import WrapperChooser
 
 # Training Parameters
-NUM_DRONES = 4
+NUM_DRONES = 20
 NUM_OBSTACLES = 50
-NUM_EPISODES = 5
-TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * NUM_DRONES
+NUM_EPISODES = 4000
+TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * 10
 
 print(" ----------------------------------------- ")
 print("Number of Agents: " + str(NUM_DRONES))
@@ -29,7 +28,7 @@ log_dir = "tmp/"
 os.makedirs(log_dir, exist_ok=True)
 
 # Creation of Environment
-env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES)
+env = CoverageMissionEnv(NUM_OBSTACLES, NUM_DRONES, TRAINING)
 env = ss.pettingzoo_env_to_vec_env_v1(env)
 env = ss.concat_vec_envs_v1(env, 1, num_cpus=8, base_class='stable_baselines3')
 
@@ -49,7 +48,7 @@ callback = Callback(check_freq=TIMESTEPS_PER_EPISODE, log_dir=log_dir, suffix=su
 #     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
 # )
 
-model = PPO.load(f"output/policy_3_5")
+model = PPO.load(f"model_b_10")
 model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)

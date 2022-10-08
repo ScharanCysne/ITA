@@ -6,7 +6,7 @@ from utils     import limit, constrain, derivativeBivariate
 from constants import *
 
 class Drone():
-    def __init__(self, x, y, index):
+    def __init__(self, x, y, index, mode):
         """
             Idealized class representing a drone
             :param x and y: represents inicial position 
@@ -28,10 +28,14 @@ class Drone():
         self.time_executing = 0  
 
         # State variables
-        self.neighbors = pygame.math.Vector2()
-        self.obstacles = pygame.math.Vector2()
+        self.last_neighbors = pygame.math.Vector2(0,0)
+        self.neighbors = pygame.math.Vector2(0,0)
+        self.obstacles = pygame.math.Vector2(0,0)
         self.vulnerability = 0
         self.connectivity = 0
+
+        # Execution mode - Training or Evaluation
+        self.mode = mode
 
 
     def reached_goal(self):
@@ -43,15 +47,14 @@ class Drone():
         self.acceleration += force/MASS 
 
 
-    def execute(self, action, obstacles, agents, enable_target=True):
+    def execute(self, action, obstacles, agents, connectivity):
         """
             Execute action
             Suffer effects from the environment
         """
         self.time_executing += 1
-        # updates behavior in machine state
-        if enable_target: 
-            self.arrive(self.target)
+        # Check connectivity
+        self.acceleration += limit(self.last_neighbors, 0.1) if not connectivity else pygame.math.Vector2(0,0)
         # Updates velocity at every step and limits it to max_speed
         self.velocity += self.acceleration 
         # Check if valid action
@@ -110,15 +113,18 @@ class Drone():
         v = pygame.math.Vector2(0,0) 
         for position in positions:
             distance = (position - self.location).magnitude()
-            if 0 < distance < OBSERVABLE_RADIUS:
+            if (self.mode == TRAINING and 0 < distance) or (self.mode == EVALUATION and 0 < distance):# < OBSERVABLE_RADIUS):
                 # Get normalized direction of neighbor 
                 direction = position - self.location 
                 # Proporcional to the distance. The closer the stronger needs to be
                 #direction = direction / distance 
                 v += direction
+        # Save last non-zero neighbours position
+        if self.neighbors.magnitude() > 0:
+            self.last_neighbors = self.neighbors 
         # This gives the direction of the resulting potential 
         self.neighbors = v.copy() / (len(positions) - 1)
-                  
+        
 
     def scan_obstacles(self, positions):
         """
@@ -131,8 +137,8 @@ class Drone():
         v = pygame.math.Vector2(0,0) 
         for position in positions:
             distance = (position - self.location).magnitude()
-            if 0 < distance < OBSERVABLE_RADIUS and self.location[0] < position[0]:
-                if distance < mindistance:
+            if (self.mode == TRAINING and 0 < distance) or (self.mode == EVALUATION and 0 < distance < OBSERVABLE_RADIUS):
+                if self.location[0] < position[0] and distance < mindistance:
                     mindistance = distance
                     # Get normalized direction of neighbor 
                     direction = position - self.location 
@@ -148,7 +154,7 @@ class Drone():
             Determine resulting potential field given obstacles and other drones
         """
         alpha = beta = 0.005
-        # Repulsion drones
+        # --- Repulsion drones
         for position in pos_drones:
             distance = (self.location - position).magnitude()
             if 0 < distance < OBSERVABLE_RADIUS:
@@ -168,9 +174,24 @@ class Drone():
                 #f_repulsion = limit(f_repulsion, SEEK_FORCE)
                 self.applyForce(-f_repulsion)
 
-            # Avoids that the drone goes over the obstacle
-            #if (distance < AVOID_DISTANCE):
-            #    self.velocity *= -1
+        # --- Repulsion walls
+        # Distance to Bottom
+        distance = UPPER_Y - self.location[1] 
+        # Proporcional to the distance. The closer the stronger needs to be
+        if distance > 0:
+            f_repulsion = pygame.math.Vector2(0,2) / sqrt(distance)
+        else:
+            f_repulsion = pygame.math.Vector2(0,2) * SEEK_FORCE
+        self.applyForce(-f_repulsion)
+        
+        # Distance to Top
+        distance = self.location[1] - LOWER_Y 
+        # Proporcional to the distance. The closer the stronger needs to be
+        if distance > 0:
+            f_repulsion = pygame.math.Vector2(0,-2) / sqrt(distance)
+        else:
+            f_repulsion = pygame.math.Vector2(0,-2) * SEEK_FORCE
+        self.applyForce(-f_repulsion)
 
 
     def get_state(self):
@@ -181,8 +202,8 @@ class Drone():
             self.connectivity,
             self.obstacles[0],
             self.obstacles[1],
-            self.neighbors[0],
-            self.neighbors[1]
+            self.last_neighbors[0],
+            self.last_neighbors[1]
         ]
             
 
