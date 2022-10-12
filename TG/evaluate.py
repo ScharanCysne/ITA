@@ -13,8 +13,8 @@ NUM_EPISODES = 10
 NUM_TIMESTEPS = 10000
 
 # Load Model
-#model = PPO.load(f"tmp/model_10_2000")
-model = PPO.load(f"output/policy_10_3000")
+#model = PPO.load(f"tmp/model_15_10000")
+model = PPO.load(f"output/policy_20_5000")
 #model = PPO.load(f"model_b_3")
 #model = PPO.load(f"model_b_4")
 #model = PPO.load(f"model_b_5")
@@ -28,7 +28,7 @@ parallel_api_test(env, num_cycles=1000)
 interface = Interface()
 episode_time = []
 timesteps = 0
-record = True
+record = False
 
 for episode in range(NUM_EPISODES):
     # Init episode

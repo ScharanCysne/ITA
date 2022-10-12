@@ -15,7 +15,7 @@ from pettingzoo       import ParallelEnv
 from stable_baselines3.common.monitor import ResultsWriter
 
 writer = ResultsWriter(
-    "tmp/20_4000",
+    "tmp/20_1000",
     header={"t_start": 0, "env_id": 0 }
 )
 
@@ -51,10 +51,10 @@ class CoverageMissionEnv(ParallelEnv):
         self.t_start = time.time()
 
         # Define agents
-        self.possible_agents = ["Drone " + str(i) for i in range(10)]
+        self.possible_agents = ["Drone " + str(i) for i in range(20)]
         self.agents = self.possible_agents
         self.agent_name_mapping = dict(
-            zip(self.possible_agents, list(range(10)))
+            zip(self.possible_agents, list(range(20)))
         )
         self.cap_agents = num_agents
         
@@ -345,22 +345,18 @@ class State:
         for name in possible_agents:
             if name in agents:
                 agent = agents[name]
-                # Connectivity Controller
-                # Try to maintain delta in y axis - not to form a line
-                #rewards[name] = abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
+                # Initialize reward
                 rewards[name] = 0
+                # Try to maintain delta in y axis - not to form a line
+                rewards[name] += abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
+                # Connectivity Controller
                 # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
                 if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
                     # Reward if above threshold
-                    rewards[name] += 1 / self.num_agents
+                    rewards[name] += 2 / self.num_agents
                 else:
                     # makes it move to last know position of last_neighbors
-                    rewards[name] += pygame.math.Vector2(actions[name][0], actions[name][1]).dot(agents[name].last_neighbors.normalize())
-                #elif self.network_connectivity == 1:
-                #    # Neutral Reward if connected, but not as high if above threshold
-                #    rewards[name] += 0.001 
-                #else:
-                #    rewards[name] = PENALTY_DISCONNECTED / self.num_agents
+                    rewards[name] += pygame.math.Vector2(actions[name][0], actions[name][1]).dot(agents[name].last_neighbors)
                 # Walking in border penalty
                 if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
                     rewards[name] += PENALTY_STEP

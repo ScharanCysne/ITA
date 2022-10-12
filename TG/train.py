@@ -12,7 +12,7 @@ from stable_baselines3.common.results_plotter   import plot_results, X_TIMESTEPS
 # Training Parameters
 NUM_DRONES = 20
 NUM_OBSTACLES = 50
-NUM_EPISODES = 4000
+NUM_EPISODES = 1000
 TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * 10
 
 print(" ----------------------------------------- ")
@@ -48,7 +48,7 @@ callback = Callback(check_freq=TIMESTEPS_PER_EPISODE, log_dir=log_dir, suffix=su
 #     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
 # )
 
-model = PPO.load(f"model_b_10")
+model = PPO.load(f"model_b_15")
 model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)
