@@ -293,13 +293,12 @@ class State:
         y_min = min(agent.location[1] - OBSERVABLE_RADIUS for agent in drones)
         y_max = min(agent.location[1] + OBSERVABLE_RADIUS for agent in drones)
         # Precision
-        box_side = 40
+        box_side = 50
         # Size of bounding box
         dx = (x_max - x_min) / box_side
         dy = (y_max - y_min) / box_side
         # Count of small blocks
         count = 0
-
         for r in range(box_side):
             y = y_min + r * dy
             for c in range(box_side):
@@ -345,18 +344,14 @@ class State:
         for name in possible_agents:
             if name in agents:
                 agent = agents[name]
-                # Initialize reward
-                rewards[name] = 0
-                # Try to maintain delta in y axis - not to form a line
-                rewards[name] += abs(agent.location[1] - self.cm[1]) / SCREEN_HEIGHT
+                # Area Coverage Controller
+                rewards[name] = ((agent.location - self.cm).magnitude() - OBSERVABLE_RADIUS) / OBSERVABLE_RADIUS
                 # Connectivity Controller
-                # Algebraic connectivity is bounded 0 < K < vertices - 1, the higher the better
                 if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
                     # Reward if above threshold
-                    rewards[name] += 2 / self.num_agents
-                else:
-                    # makes it move to last know position of last_neighbors
-                    rewards[name] += pygame.math.Vector2(actions[name][0], actions[name][1]).dot(agents[name].last_neighbors)
+                    rewards[name] += 1 / self.num_agents
+                    if self.algebraic_connectivity > target_connectivity:
+                        rewards[name] += 1 / self.num_agents
                 # Walking in border penalty
                 if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
                     rewards[name] += PENALTY_STEP

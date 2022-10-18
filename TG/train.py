@@ -2,12 +2,13 @@ import os
 import supersuit as ss
 import matplotlib.pyplot as plt
 
+from rewards                                    import save_rewards
 from callback                                   import Callback
 from constants                                  import *
 from environment                                import CoverageMissionEnv
 from stable_baselines3                          import PPO
 from stable_baselines3.common.policies          import ActorCriticPolicy
-from stable_baselines3.common.results_plotter   import plot_results, X_TIMESTEPS
+from stable_baselines3.common.results_plotter   import plot_results, X_EPISODES
 
 # Training Parameters
 NUM_DRONES = 20
@@ -48,11 +49,9 @@ callback = Callback(check_freq=TIMESTEPS_PER_EPISODE, log_dir=log_dir, suffix=su
 #     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
 # )
 
-model = PPO.load(f"model_b_15")
+model = PPO.load(f"model_b_20")
 model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)
 model.save(f"output/policy_{NUM_DRONES}_{NUM_EPISODES}")
-
-plot_results([log_dir], TOTAL_TIMESTEPS, X_TIMESTEPS, "PPO CoverageMission")
-plt.savefig(f"output/rewards_{NUM_DRONES}_{NUM_EPISODES}")
+save_rewards(log_dir, NUM_DRONES, NUM_EPISODES)
