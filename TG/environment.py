@@ -2,8 +2,10 @@ import math
 import time
 import pygame 
 import scipy.io
-import numpy as np
 import functools
+import operator
+import numpy as np
+import networkx as nx
 
 from constants        import *
 from gym              import spaces
@@ -15,7 +17,7 @@ from pettingzoo       import ParallelEnv
 from stable_baselines3.common.monitor import ResultsWriter
 
 writer = ResultsWriter(
-    "tmp/20_1000",
+    "tmp/2_2000",
     header={"t_start": 0, "env_id": 0 }
 )
 
@@ -67,12 +69,13 @@ class CoverageMissionEnv(ParallelEnv):
         self.env_state = State(num_agents)
         self.target_algebraic_connectivity = 0
         self.mode = mode
+        self.attack_time = np.arange(int(0.7 * num_agents))
 
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
-        # Define state space (pos_x, pos_y, vulnerability, connectivity, obstacles_x, obstacles_y, neighbors_x, neighbors_y)
-        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.array([1, 1, 1, 10, 32, 32, 32, 32]), dtype=np.float64)
+        # Define state space (pos_x, pos_y, robustness, connectivity, obstacles_x, obstacles_y, neighbors_x, neighbors_y)
+        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.array([1, 1, 1, 20, 32, 32, 32, 32]), dtype=np.float64)
 
     
     @functools.lru_cache(maxsize=None)
@@ -96,6 +99,11 @@ class CoverageMissionEnv(ParallelEnv):
         if not actions:
             self.agents = []
             return {}, {}, {}, {}
+
+        # Generate attack
+        if self.time_executing > self.attack_time[0]:
+            self.attack_time.pop(0)
+            self.attack_network()
 
         # Get drones positions
         neighbors_positions = [agent.location for agent in self.agents_mapping.values()]
@@ -218,6 +226,12 @@ class CoverageMissionEnv(ParallelEnv):
             self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
     
 
+    def attack_network(self):
+        BCs = self.env_state.calculate_betweenees_centrality()
+        highest_node = max(BCs.iteritems(), key=operator.itemgetter(1))[0] 
+        self.agents = [agent for agent in self.agents if agent != highest_node]
+
+
     def get_obstacles(self):
         return self.obstacles
 
@@ -230,12 +244,12 @@ class State:
     def __init__(self, num_agents):
         self.agents = []
         self.num_agents = num_agents
-        # Network status
+        # Network 
+        self.G = nx.Graph()
         self.adjacencyMatrix = np.zeros((num_agents,num_agents))
-        self.degreeMatrix = np.zeros((num_agents,num_agents))
-        self.laplacianMatrix = np.zeros((num_agents,num_agents))
-        self.algebraic_connectivity = 0
         # Global state
+        self.algebraic_connectivity = 0
+        self.betweenees_centrality = 0
         self.network_connectivity = 0
         self.network_robustness = 0
         self.network_coverage = 0
@@ -243,16 +257,21 @@ class State:
         self.cm = 0
 
 
+    def clear_network(self, agents):
+        self.G.clear()
+        self.G.add_nodes_from(agents)
+
+
     def update_state(self, agents):
         self.agents = agents
-        # Update graph robustness
-        self.calculate_robustness(agents)
         # Update graph connectivity
         self.calculate_connectivity(agents)
         # Update graph area coverage
         self.calculate_coverage(agents)
+        # Update graph robustness
+        self.calculate_robustness()
         # Update CM of topology
-        self.cm = self.calculate_center(agents)
+        self.calculate_center(agents)
 
 
     def calculate_center(self, agents):
@@ -260,29 +279,41 @@ class State:
         cm = pygame.Vector2(0,0)
         for drone in drones:
             cm += drone.location 
-        return cm / len(drones)
+        self.cm = cm / len(drones)
 
 
     def calculate_connectivity(self, agents):
+        # Clear edges from network
+        self.clear_network(agents.keys())
+        # Get network objects
         drones = list(agents.values())
         for i in range(self.num_agents):
             for j in range(i+1, self.num_agents):
+                # Check if they are linked
                 connected = distance(drones[i], drones[j]) < OBSERVABLE_RADIUS
                 # Update Adjacency Matrix
-                self.adjacencyMatrix[i][j] = 1 if connected else 0
-                self.adjacencyMatrix[j][i] = 1 if connected else 0
-            # Update Degree Matrix
-            self.degreeMatrix[i][i] = np.sum(self.adjacencyMatrix[i])
-        # Update Laplacian Matrix
-        self.laplacianMatrix = self.degreeMatrix - self.adjacencyMatrix
-        eigenvalues, _ = np.linalg.eig(self.laplacianMatrix)
-        eigenvalues.sort()
-        self.algebraic_connectivity = eigenvalues[1] if type(eigenvalues[1]) == np.float64 else 0
+                if connected:
+                    self.adjacencyMatrix[i][j] = 1 
+                    self.adjacencyMatrix[j][i] = 1 
+                    # Add edge in networkX graph
+                    self.G.add_edge(drones[i].name, drones[j].name)
+                else:
+                    self.adjacencyMatrix[i][j] = 0 
+                    self.adjacencyMatrix[j][i] = 0
+        # Update Algebraic Connectivity 
+        self.algebraic_connectivity = nx.algebraic_connectivity(self.G)
         self.network_connectivity = 1 if self.algebraic_connectivity > 10e-3 else 0
 
 
-    def calculate_robustness(self, agents):
-        pass
+    def calculate_robustness(self, agents=None):
+        self.network_robustness = nx.node_connectivity(self.G) / self.num_agents
+
+
+    def calculate_betweenees_centrality(self, agents=None):
+        if agents:
+            return nx.betweenness_centrality_subset(self.G, agents, agents)    
+        self.betweenees_centrality = nx.betweenness_centrality(self.G)
+        return self.betweenees_centrality
 
 
     def calculate_coverage(self, agents):
@@ -308,18 +339,14 @@ class State:
         self.network_coverage = count * dx * dy
 
 
-    def is_connected(self, i, j):
-        return self.adjacencyMatrix[i][j]
-
-
     def get_global_state(self, agents, possible_agents):
         self.observations = dict()
         for name in possible_agents:
             if name in agents:
                 agent = agents[name]
                 self.observations[name] = agent.get_state() if agent.alive else None
-                self.observations[name][2] = self.network_robustness / 100
-                self.observations[name][3] = self.algebraic_connectivity / self.num_agents
+                self.observations[name][2] = self.network_robustness
+                self.observations[name][3] = self.algebraic_connectivity
             else:
                 self.observations[name] = [0]*8
         return self.observations
@@ -345,16 +372,16 @@ class State:
             if name in agents:
                 agent = agents[name]
                 # Area Coverage Controller
-                rewards[name] = ((agent.location - self.cm).magnitude() - OBSERVABLE_RADIUS) / OBSERVABLE_RADIUS
+                #rewards[name] = ((agent.location - self.cm).magnitude() - OBSERVABLE_RADIUS) / OBSERVABLE_RADIUS
                 # Connectivity Controller
-                if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
-                    # Reward if above threshold
-                    rewards[name] += 1 / self.num_agents
-                    if self.algebraic_connectivity > target_connectivity:
-                        rewards[name] += 1 / self.num_agents
+                #if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
+                #    # Reward if above threshold
+                #    rewards[name] += 1 / self.num_agents
+                #    if self.algebraic_connectivity > target_connectivity:
+                #        rewards[name] += 1 / self.num_agents
                 # Walking in border penalty
                 if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
-                    rewards[name] += PENALTY_STEP
+                    rewards[name] = PENALTY_STEP
             else:
                 rewards[name] = 0
         return rewards

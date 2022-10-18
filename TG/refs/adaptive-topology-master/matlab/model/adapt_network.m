@@ -30,7 +30,8 @@ labels = num2str([1:size(position,1)]'); % define the agents labels - it is nece
 N=size(position,1); %network size
 
 
-while idx < param.tf && ~isempty(position) % while there is nodes into the network and the simulation time is not the final one
+% while there is nodes into the network and the simulation time is not the final one
+while idx < param.tf && ~isempty(position) 
     
     param.idx=idx; % set the time - is use into the ODE for persisting the iteration results
     
