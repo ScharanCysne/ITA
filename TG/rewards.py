@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3.common.results_plotter import X_EPISODES, ts2xy, window_func
 
 def save_rewards(log_dir, num_drones, num_episodes):
-    file_name = f"{num_drones}_{num_episodes}_monitor.csv"
+    file_name = f"{num_drones}_{num_episodes}.monitor.csv"
     headers = []
     with open(log_dir + file_name, "rt") as file_handler:
         first_line = file_handler.readline()

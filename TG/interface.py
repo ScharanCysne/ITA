@@ -84,7 +84,9 @@ class Interface(object):
         num_agents = len(drones)
         for i in range(num_agents):
             for j in range(i+1, num_agents):
-                if state.adjacencyMatrix[i][j]:
+                idx_i = drones[i].id
+                idx_j = drones[j].id
+                if state.adjacencyMatrix[idx_i][idx_j]:
                     pos_i = RATIO * drones[i].location
                     pos_j = RATIO * drones[j].location
                     pygame.draw.line(self.screen, BLACK, pos_i, pos_j, 1)
@@ -116,8 +118,8 @@ class Interface(object):
         for drone in agents.values():
             pos_i = RATIO * drone.location
             # Obstacles vector
-            pos_j = RATIO * drone.location + RATIO * drone.obstacles 
-            pygame.draw.line(self.screen, RED, pos_i, pos_j, 1)
+            #pos_j = RATIO * drone.location + RATIO * drone.obstacles 
+            #pygame.draw.line(self.screen, RED, pos_i, pos_j, 1)
             # Neighbors vector
-            pos_j = RATIO * drone.location + RATIO * drone.neighbors 
-            pygame.draw.line(self.screen, LIGHT_GRAY, pos_i, pos_j, 1)
+            #pos_j = RATIO * drone.location + RATIO * drone.neighbors 
+            #pygame.draw.line(self.screen, LIGHT_GRAY, pos_i, pos_j, 1)

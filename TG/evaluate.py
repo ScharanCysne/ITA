@@ -1,5 +1,6 @@
 import sys
 import pygame
+import warnings
 
 from interface                          import Interface
 from constants                          import *
@@ -7,14 +8,16 @@ from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
 
+warnings.filterwarnings("ignore")
+
 NUM_DRONES = 20
-NUM_OBSTACLES = 50
+NUM_OBSTACLES = 100
 NUM_EPISODES = 10
 NUM_TIMESTEPS = 10000
 
 # Load Model
 #model = PPO.load(f"tmp/model_15_10000")
-model = PPO.load(f"output/policy_20_1000")
+model = PPO.load(f"output/policy_20_2000")
 #model = PPO.load(f"model_b_3")
 #model = PPO.load(f"model_b_4")
 #model = PPO.load(f"model_b_5")
@@ -41,7 +44,6 @@ for episode in range(NUM_EPISODES):
         for agent in obs:
             actions[agent] = model.predict(obs[agent], deterministic=True)[0]
         obs, rewards, dones, infos = env.step(actions)
-        
         # Draws at every dt
         interface.clock.tick(FREQUENCY)
         agents, obstacles, env_state, num_agents, time_executing = env.render()

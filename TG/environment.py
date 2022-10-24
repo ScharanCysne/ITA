@@ -17,7 +17,7 @@ from pettingzoo       import ParallelEnv
 from stable_baselines3.common.monitor import ResultsWriter
 
 writer = ResultsWriter(
-    "tmp/2_2000",
+    "tmp/20_2000",
     header={"t_start": 0, "env_id": 0 }
 )
 
@@ -69,13 +69,13 @@ class CoverageMissionEnv(ParallelEnv):
         self.env_state = State(num_agents)
         self.target_algebraic_connectivity = 0
         self.mode = mode
-        self.attack_time = np.arange(int(0.7 * num_agents))
+        self.attack_time = np.arange(2, int(0.7 * num_agents), 1)
 
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
         # Define state space (pos_x, pos_y, robustness, connectivity, obstacles_x, obstacles_y, neighbors_x, neighbors_y)
-        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.array([1, 1, 1, 20, 32, 32, 32, 32]), dtype=np.float64)
+        return spaces.Box(low=np.zeros(self.N_SPACE), high=np.array([1, 1, 1, 10, 32, 32, 32, 32]), dtype=np.float64)
 
     
     @functools.lru_cache(maxsize=None)
@@ -100,11 +100,6 @@ class CoverageMissionEnv(ParallelEnv):
             self.agents = []
             return {}, {}, {}, {}
 
-        # Generate attack
-        if self.time_executing > self.attack_time[0]:
-            self.attack_time.pop(0)
-            self.attack_network()
-
         # Get drones positions
         neighbors_positions = [agent.location for agent in self.agents_mapping.values()]
         obstacles_positions = self.obstacles
@@ -123,22 +118,28 @@ class CoverageMissionEnv(ParallelEnv):
         self.env_state.update_state(self.agents_mapping)
 
         # 3. Retrieve swarm state
-        observations = self.env_state.get_global_state(self.agents_mapping, self.possible_agents)
+        observations = self.env_state.get_global_state(self.agents_mapping, self.agents)
 
         # 4. Check completion
-        dones = self.env_state.check_completion(self.agents_mapping, self.possible_agents, self.time_executing)
+        dones = self.env_state.check_completion(self.agents_mapping, self.agents, self.time_executing)
 
         # 5. Calculate rewards
-        rewards = self.env_state.calculate_rewards(self.agents_mapping, self.possible_agents, actions, self.target_algebraic_connectivity)
+        rewards = self.env_state.calculate_rewards(self.agents_mapping, self.agents, actions, self.target_algebraic_connectivity)
 
         # 6. Return Infos
-        infos = {agent:{} for agent in self.possible_agents}
+        infos = {agent:{} for agent in self.agents}
 
-        # Update alive agents
-        self.agents = [agent for agent in self.agents if not dones[agent]]
+        # Generate attack
+        if len(self.attack_time) > 0 and self.time_executing > self.attack_time[0]:
+            self.attack_time = self.attack_time[1:]
+            terminated_node = self.attack_network()
+            del self.agents_mapping[terminated_node]
 
         # Monitor current performance
         self.monitor(dones, rewards) 
+
+        # Update alive agents
+        self.agents = [agent for agent in self.agents if not dones[agent]]
 
         return observations, rewards, dones, infos
 
@@ -160,11 +161,12 @@ class CoverageMissionEnv(ParallelEnv):
         # Initialize agents and obstacles positions
         self.generate_agents()
         self.generate_obstacles()
+        self.attack_time = np.arange(2, 2 + int(0.7 * self.num_agents), 1)
         
         # Reset observations
         self.cummulative_rewards = { agent:0 for agent in self.possible_agents }
         self.env_state.update_state(self.agents_mapping)
-        observations = self.env_state.get_global_state(self.agents_mapping, self.possible_agents)
+        observations = self.env_state.get_global_state(self.agents_mapping, self.agents)
 
         return observations  
 
@@ -208,7 +210,7 @@ class CoverageMissionEnv(ParallelEnv):
         self.agents = self.possible_agents
         self.agents_mapping = dict()
         # Load initial positions
-        index = 18 #np.random.randint(1,200)
+        index = np.random.randint(1,200)
         positions = scipy.io.loadmat(f'model/positions/{index}/position.mat')["position"]
         properties = scipy.io.loadmat(f'model/positions/{index}/properties.mat')['properties']
         self.target_algebraic_connectivity = properties[0][4]
@@ -218,7 +220,7 @@ class CoverageMissionEnv(ParallelEnv):
             self.agents_mapping[drone.name] = drone
 
 
-    def generate_obstacles(self, deterministic=True):
+    def generate_obstacles(self):
         self.obstacles = []
         mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
         obstacles_positions = mat["obstacles"]
@@ -228,8 +230,7 @@ class CoverageMissionEnv(ParallelEnv):
 
     def attack_network(self):
         BCs = self.env_state.calculate_betweenees_centrality()
-        highest_node = max(BCs.iteritems(), key=operator.itemgetter(1))[0] 
-        self.agents = [agent for agent in self.agents if agent != highest_node]
+        return max(BCs.items(), key=operator.itemgetter(1))[0] 
 
 
     def get_obstacles(self):
@@ -249,7 +250,7 @@ class State:
         self.adjacencyMatrix = np.zeros((num_agents,num_agents))
         # Global state
         self.algebraic_connectivity = 0
-        self.betweenees_centrality = 0
+        self.betweenees_centrality = dict()
         self.network_connectivity = 0
         self.network_robustness = 0
         self.network_coverage = 0
@@ -257,67 +258,68 @@ class State:
         self.cm = 0
 
 
-    def clear_network(self, agents):
-        self.G.clear()
-        self.G.add_nodes_from(agents)
+    def clear_network(self):
+        self.G = nx.Graph()
+        self.G.add_nodes_from(self.agents.keys())
 
 
     def update_state(self, agents):
         self.agents = agents
         # Update graph connectivity
-        self.calculate_connectivity(agents)
+        self.calculate_connectivity()
         # Update graph area coverage
-        self.calculate_coverage(agents)
+        self.calculate_coverage()
         # Update graph robustness
         self.calculate_robustness()
         # Update CM of topology
-        self.calculate_center(agents)
+        self.calculate_center()
 
 
-    def calculate_center(self, agents):
-        drones = list(agents.values())
+    def calculate_center(self):
+        drones = list(self.agents.values())
         cm = pygame.Vector2(0,0)
         for drone in drones:
             cm += drone.location 
         self.cm = cm / len(drones)
 
 
-    def calculate_connectivity(self, agents):
+    def calculate_connectivity(self):
         # Clear edges from network
-        self.clear_network(agents.keys())
+        self.clear_network()
         # Get network objects
-        drones = list(agents.values())
+        drones = list(self.agents.values())
+        self.num_agents = len(drones)
         for i in range(self.num_agents):
             for j in range(i+1, self.num_agents):
                 # Check if they are linked
                 connected = distance(drones[i], drones[j]) < OBSERVABLE_RADIUS
+                idx_i = drones[i].id
+                idx_j = drones[j].id
                 # Update Adjacency Matrix
                 if connected:
-                    self.adjacencyMatrix[i][j] = 1 
-                    self.adjacencyMatrix[j][i] = 1 
+                    self.adjacencyMatrix[idx_i][idx_j] = 1 
+                    self.adjacencyMatrix[idx_j][idx_i] = 1 
                     # Add edge in networkX graph
                     self.G.add_edge(drones[i].name, drones[j].name)
                 else:
-                    self.adjacencyMatrix[i][j] = 0 
-                    self.adjacencyMatrix[j][i] = 0
+                    self.adjacencyMatrix[idx_i][idx_j] = 0 
+                    self.adjacencyMatrix[idx_j][idx_i] = 0
         # Update Algebraic Connectivity 
         self.algebraic_connectivity = nx.algebraic_connectivity(self.G)
         self.network_connectivity = 1 if self.algebraic_connectivity > 10e-3 else 0
 
 
-    def calculate_robustness(self, agents=None):
+    def calculate_robustness(self):
         self.network_robustness = nx.node_connectivity(self.G) / self.num_agents
 
 
-    def calculate_betweenees_centrality(self, agents=None):
-        if agents:
-            return nx.betweenness_centrality_subset(self.G, agents, agents)    
+    def calculate_betweenees_centrality(self):
         self.betweenees_centrality = nx.betweenness_centrality(self.G)
         return self.betweenees_centrality
 
 
-    def calculate_coverage(self, agents):
-        drones = list(agents.values())
+    def calculate_coverage(self):
+        drones = list(self.agents.values())
         # compute the bounding box of the circles
         x_min = min(agent.location[0] - OBSERVABLE_RADIUS for agent in drones)
         x_max = min(agent.location[0] + OBSERVABLE_RADIUS for agent in drones)
@@ -345,7 +347,7 @@ class State:
             if name in agents:
                 agent = agents[name]
                 self.observations[name] = agent.get_state() if agent.alive else None
-                self.observations[name][2] = self.network_robustness
+                self.observations[name][2] = self.betweenees_centrality.get(name, 0.0)
                 self.observations[name][3] = self.algebraic_connectivity
             else:
                 self.observations[name] = [0]*8
@@ -354,14 +356,7 @@ class State:
 
     def check_completion(self, agents, possible_agents, time_executing):
         dones = dict()
-        env_done = True
-        for name in possible_agents:
-            if name in agents and not agents[name].reached_goal():
-                env_done = False
-        if time_executing > TIME_MAX_SIMULATION:
-            env_done = True 
-        #if self.network_connectivity == 0:
-        #    env_done = True 
+        env_done = True if time_executing > TIME_MAX_SIMULATION else False 
         dones = { agent:env_done for agent in possible_agents }
         return dones
 
@@ -372,16 +367,18 @@ class State:
             if name in agents:
                 agent = agents[name]
                 # Area Coverage Controller
-                #rewards[name] = ((agent.location - self.cm).magnitude() - OBSERVABLE_RADIUS) / OBSERVABLE_RADIUS
+                rewards[name] = ((agent.location - self.cm).magnitude() - OBSERVABLE_RADIUS) / OBSERVABLE_RADIUS
                 # Connectivity Controller
-                #if self.network_connectivity == 1: # and self.algebraic_connectivity >= target_connectivity:
-                #    # Reward if above threshold
-                #    rewards[name] += 1 / self.num_agents
-                #    if self.algebraic_connectivity > target_connectivity:
-                #        rewards[name] += 1 / self.num_agents
+                #if self.network_connectivity == 1: 
+                    # Reward if above threshold
+                    #rewards[name] += 0.5 / self.num_agents
+                    #if self.algebraic_connectivity > target_connectivity:
+                    #    rewards[name] += 0.5 / self.num_agents
+                # Robustness Controller
+                rewards[name] += (self.network_robustness - 0.1) / self.num_agents
                 # Walking in border penalty
                 if agent.location[1] == 50 or agent.location[1] == 0 or agent.location[0] == 0:
-                    rewards[name] = PENALTY_STEP
+                    rewards[name] = PENALTY_STEP / self.num_agents
             else:
                 rewards[name] = 0
         return rewards
