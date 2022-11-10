@@ -13,9 +13,9 @@ from stable_baselines3.common.policies          import ActorCriticPolicy
 warnings.filterwarnings("ignore")
 
 # Training Parameters
-NUM_DRONES = 20
+NUM_DRONES = 3
 NUM_OBSTACLES = 100
-NUM_EPISODES = 2000
+NUM_EPISODES = 1000
 TOTAL_TIMESTEPS = NUM_EPISODES * TIMESTEPS_PER_EPISODE * 20
 
 print(" ----------------------------------------- ")
@@ -51,7 +51,7 @@ callback = Callback(check_freq=TIMESTEPS_PER_EPISODE, log_dir=log_dir, suffix=su
 #     policy_kwargs={'net_arch': [dict(pi=[32, 32, 16], vf=[32, 32, 16])]}
 # )
 
-model = PPO.load(f"model_b_20")
+model = PPO.load(f"model_b_2")
 model.set_env(env)
 
 model = model.learn(total_timesteps=TOTAL_TIMESTEPS, callback=callback)

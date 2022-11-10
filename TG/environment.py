@@ -17,7 +17,7 @@ from pettingzoo       import ParallelEnv
 from stable_baselines3.common.monitor import ResultsWriter
 
 writer = ResultsWriter(
-    "tmp/20_2000",
+    "tmp/3_1000",
     header={"t_start": 0, "env_id": 0 }
 )
 
@@ -144,7 +144,7 @@ class CoverageMissionEnv(ParallelEnv):
         return observations, rewards, dones, infos
 
 
-    def reset(self, seed=None, return_info=False, options=None):
+    def reset(self, scenario=None, seed=None, return_info=False, options=None):
         """
         Reset needs to initialize the `agents` attribute and must set up the
         environment so that render(), and step() can be called without issues.
@@ -159,8 +159,8 @@ class CoverageMissionEnv(ParallelEnv):
         self.time_executing = 0
 
         # Initialize agents and obstacles positions
-        self.generate_agents()
-        self.generate_obstacles()
+        self.generate_agents(scenario)
+        self.generate_obstacles(scenario)
         self.attack_time = np.arange(2, 2 + int(0.7 * self.num_agents), 1)
         
         # Reset observations
@@ -205,12 +205,12 @@ class CoverageMissionEnv(ParallelEnv):
         pass
 
 
-    def generate_agents(self):
+    def generate_agents(self, scenario=None):
         # Create new swarm of drones
         self.agents = self.possible_agents
         self.agents_mapping = dict()
         # Load initial positions
-        index = np.random.randint(1,200)
+        index = np.random.randint(1,200) if scenario is None else scenario
         positions = scipy.io.loadmat(f'model/positions/{index}/position.mat')["position"]
         properties = scipy.io.loadmat(f'model/positions/{index}/properties.mat')['properties']
         self.target_algebraic_connectivity = properties[0][4]
@@ -220,9 +220,10 @@ class CoverageMissionEnv(ParallelEnv):
             self.agents_mapping[drone.name] = drone
 
 
-    def generate_obstacles(self):
+    def generate_obstacles(self, scenario=None):
         self.obstacles = []
-        mat = scipy.io.loadmat(f'model/positions/{np.random.randint(1,200)}/obstacles.mat')
+        index = np.random.randint(1,200) if scenario is None else scenario
+        mat = scipy.io.loadmat(f'model/positions/{index}/obstacles.mat')
         obstacles_positions = mat["obstacles"]
         for index in range(len(obstacles_positions)):
             self.obstacles.append(pygame.math.Vector2(obstacles_positions[index][0], obstacles_positions[index][1])) 
