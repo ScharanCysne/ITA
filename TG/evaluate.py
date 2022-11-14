@@ -78,7 +78,7 @@ plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Robustness Level")
 plt.xlabel("Timestep")
 plt.ylabel("Robustness Level")
 plt.tight_layout()
-plt.savefig(f"RL_{NUM_DRONES}")
+plt.savefig(f"RL_{NUM_DRONES}B")
 plt.show()
 
 y = algebraic_connectivity.mean(axis=0)
@@ -93,11 +93,11 @@ plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Algebraic Connectivity
 plt.xlabel("Timestep")
 plt.ylabel("Algebraic Connectivity")
 plt.tight_layout()
-plt.savefig(f"MAC_{NUM_DRONES}_Attacks")
+plt.savefig(f"MAC_{NUM_DRONES}_AttacksB")
 plt.show()
 
 
-y = area_coverage.mean(axis=0) / (15 * np.pi * 16 * 16)
+y = area_coverage.mean(axis=0) / (20 * np.pi * 16 * 16)
 
 plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percentage", figsize=(8, 2))
 max_x = x[-1]
@@ -109,5 +109,5 @@ plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percenta
 plt.xlabel("Timestep")
 plt.ylabel("Mean Percentage")
 plt.tight_layout()
-plt.savefig(f"AC_{NUM_DRONES}")
+plt.savefig(f"AC_{NUM_DRONES}B")
 plt.show()
