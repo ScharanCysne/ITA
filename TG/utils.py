@@ -3,6 +3,7 @@ import math
 import numpy as np
 import pygame
 import random
+import matplotlib.pyplot as plt
 
 from math      import exp 
 from constants import *
@@ -105,3 +106,40 @@ def intersection(drone_i, drone_j):
     d = (drone_i.location - drone_j.location).magnitude()
     d1 = d / 2
     return 2 * OBSERVABLE_RADIUS**2 * math.acos(d1/OBSERVABLE_RADIUS) - d1 * math.sqrt(OBSERVABLE_RADIUS**2 - d1**2)
+
+def plot_results(NUM_DRONES, NUM_TIMESTEPS, robustness_level, algebraic_connectivity, area_coverage):
+    x = list(range(NUM_TIMESTEPS))
+
+    # Robustness Level
+    y = robustness_level.mean(axis=0)
+    plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Robustness Level", figsize=(8, 2))
+    plt.plot(x, robustness_level.mean(axis=0))
+    # Compute and plot rolling mean with window of size EPISODE_WINDOW
+    plt.xlim(0, x[-1])
+    plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Robustness Level")
+    plt.xlabel("Timestep")
+    plt.ylabel("Robustness Level")
+    plt.tight_layout()
+    plt.savefig(f"RL_{NUM_DRONES}")
+
+    # Algebraic Connectivity
+    plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Algebraic Connectivity", figsize=(8, 2))
+    plt.plot(x, algebraic_connectivity.mean(axis=0))
+    # Compute and plot rolling mean with window of size EPISODE_WINDOW
+    plt.xlim(0, x[-1])
+    plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Algebraic Connectivity")
+    plt.xlabel("Timestep")
+    plt.ylabel("Algebraic Connectivity")
+    plt.tight_layout()
+    plt.savefig(f"MAC_{NUM_DRONES}_AttacksB")
+
+    # Area Coverage
+    plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percentage", figsize=(8, 2))
+    plt.plot(x, area_coverage.mean(axis=0) / (NUM_DRONES * np.pi * OBSERVABLE_RADIUS ** 2))
+    # Compute and plot rolling mean with window of size EPISODE_WINDOW
+    plt.xlim(0, x[-1])
+    plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percentage")
+    plt.xlabel("Timestep")
+    plt.ylabel("Mean Percentage")
+    plt.tight_layout()
+    plt.savefig(f"AC_{NUM_DRONES}B")

@@ -8,6 +8,7 @@ from constants                          import *
 from environment                        import CoverageMissionEnv
 from stable_baselines3                  import PPO
 from pettingzoo.test                    import parallel_api_test
+from utils                              import plot_results
 
 warnings.filterwarnings("ignore")
 
@@ -63,51 +64,5 @@ for episode in range(NUM_EPISODES):
     env.close()
     record = False
 
-import matplotlib.pyplot as plt
-x = list(range(NUM_TIMESTEPS))
-
-y = robustness_level.mean(axis=0)
-
-plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Robustness Level", figsize=(8, 2))
-max_x = x[-1]
-min_x = 0
-plt.plot(x, y)
-# Compute and plot rolling mean with window of size EPISODE_WINDOW
-plt.xlim(min_x, max_x)
-plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Robustness Level")
-plt.xlabel("Timestep")
-plt.ylabel("Robustness Level")
-plt.tight_layout()
-plt.savefig(f"RL_{NUM_DRONES}B")
-plt.show()
-
-y = algebraic_connectivity.mean(axis=0)
-
-plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Algebraic Connectivity", figsize=(8, 2))
-max_x = x[-1]
-min_x = 0
-plt.plot(x, y)
-# Compute and plot rolling mean with window of size EPISODE_WINDOW
-plt.xlim(min_x, max_x)
-plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Algebraic Connectivity")
-plt.xlabel("Timestep")
-plt.ylabel("Algebraic Connectivity")
-plt.tight_layout()
-plt.savefig(f"MAC_{NUM_DRONES}_AttacksB")
-plt.show()
-
-
-y = area_coverage.mean(axis=0) / (20 * np.pi * 16 * 16)
-
-plt.figure(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percentage", figsize=(8, 2))
-max_x = x[-1]
-min_x = 0
-plt.plot(x, y)
-# Compute and plot rolling mean with window of size EPISODE_WINDOW
-plt.xlim(min_x, max_x)
-plt.title(f"Coverage Mission | {NUM_DRONES} Drones | Mean Area Coverage Percentage")
-plt.xlabel("Timestep")
-plt.ylabel("Mean Percentage")
-plt.tight_layout()
-plt.savefig(f"AC_{NUM_DRONES}B")
-plt.show()
+# Plot Algebraic Connectivity, Area Coverage, Robustness Level
+plot_results(NUM_DRONES, NUM_TIMESTEPS, robustness_level, algebraic_connectivity, area_coverage)
