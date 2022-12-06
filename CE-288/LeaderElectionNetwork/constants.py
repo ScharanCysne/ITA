@@ -17,7 +17,7 @@ RESOLUTION = 30                 # of grid
 SIZE_OBSTACLES = 3
 SIZE_DRONE = 3
 RATIO = SCREEN_WIDTH / UPPER_X  # Factor to convert from pixels to meters
-TIME_MAX_SIMULATION = 12        # Time to stop simulation in case the conditions are not completed
+TIME_MAX_SIMULATION = 15        # Time to stop simulation in case the conditions are not completed
 
 # Sample Time Parameters
 FREQUENCY = 60                  # simulation frequency
@@ -48,3 +48,8 @@ TRAINING = 1
 EVALUATION = 0
 BUFFER = 1024
 PORT = 20002
+
+# STATE MACHINE
+LEADER = 0
+FOLLOWER = 1
+CANDIDATE = 2

@@ -11,10 +11,8 @@ from constants import *
 def distance(x0, y0, x1, y1):
     return np.sqrt((x0 - x1)**2 + (y0 - y1)**2)
 
-def distance(drone_0, drone_1):
-    pos_x_0, pos_y_0 = drone_0.location
-    pos_x_1, pos_y_1 = drone_1.location
-    return np.sqrt((pos_x_0 - pos_x_1)**2 + (pos_y_0 - pos_y_1)**2)
+def distance(p0, p1):
+    return np.sqrt((p0[0] - p1[0])**2 + (p0[1] - p1[1])**2)
 
 def normalFunction(omega, center, position):
     f = exp( -omega*((position.x - center.x) + (position.y - center.y)))
@@ -132,3 +130,8 @@ def plot_results(NUM_DRONES, NUM_TIMESTEPS, robustness_level, algebraic_connecti
     plt.ylabel("Algebraic Connectivity")
     plt.tight_layout()
     plt.savefig(f"MAC_{NUM_DRONES}_AttacksB")
+
+
+def display_info(infos):
+    for idx, info in infos.items():
+        print(f"DRONE {idx}: " + info)
