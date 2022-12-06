@@ -30,17 +30,33 @@ class CoverageMissionEnv:
         # State Estimator 
         self.state = State(positions, self.alive)
         self.logger = logger
-        
+        self.leader = -1
+        self.election = False
+        self.votes = {i:-1 for i in range(NUM_DRONES)}
+
+
+    def count_votes(self):
+        cnt = dict()
+        max_vote = -1
+        for idx, vote in self.votes.items():
+            cnt[vote] = cnt.get(vote, 0) + 1
+            if cnt.get(vote,0) > cnt.get(max_vote,0):
+                max_vote = vote
+        if cnt.get(max_vote, 0) > NUM_DRONES // 2 and max_vote > -1:
+            self.leader = max_vote
+            self.broadcast({'leader': max_vote})
+            self.logger.info(f"ELECTED Drone {max_vote}")
+            self.election = False
 
     def broadcast(self, data):
         # Broadcasting data for all drones (irrealistic)
         # Used for initialization only
         for idx in range(NUM_DRONES):
             if idx in self.alive:
-                self.send_status(idx, data)
+                self.send_msg(idx, data)
 
 
-    def read_channel(self):
+    def read_msg(self):
         if not self.queues[-1].empty():
             orig, dest, data = self.queues[-1].get()
             return orig, dest, data
@@ -48,7 +64,7 @@ class CoverageMissionEnv:
             return None, None, None
 
 
-    def send_status(self, idx, data):
+    def send_msg(self, idx, data):
         self.queues[idx].put((20, idx, data))
 
 
@@ -57,7 +73,17 @@ class CoverageMissionEnv:
         self.leader = data.get('leader', self.leader)
         if self.leader > -1:
             self.positions[self.leader] = self.positions[self.leader] 
-    
+        # Election msg
+        election = data.get('election', self.election)
+        if election and (
+            self.leader == -1 or 
+            (self.leader != -1 and data.get('vote', self.votes[orig]) != -1 and self.leader in self.alive and data.get('vote', self.votes[orig]) in self.alive and  
+             self.state.betweenees_centrality[self.leader] > self.state.betweenees_centrality[data.get('vote', self.votes[orig])])):
+            self.votes[orig] = data.get('vote', self.votes[orig])
+            self.election = election
+        else:
+            self.votes[orig] = -1
+
 
     def step(self):
         self.time_executing += SAMPLE_TIME
@@ -69,32 +95,31 @@ class CoverageMissionEnv:
             self.attack_time = self.attack_time[1:]
             terminated_node = self.attack_network()
             self.alive.remove(terminated_node)
-            self.send_status(terminated_node, {'attack':True})
+            self.send_msg(terminated_node, {'attack': True})
             infos[terminated_node] = "TERMINATED"
+            if self.leader == terminated_node:
+                self.leader = -1
             
-        # Get drones' positions
+        # Get messages
         while True:
             # Read incoming messages
-            orig, dest, data = self.read_channel()
+            orig, dest, data = self.read_msg()
             # Check if completed
             if orig is None and dest is None and data is None:
                 break
             # Parse incoming message
             self.parse(orig, dest, data)
+            # Check if any drone elected
+            if self.election:
+                self.count_votes()
         # 2. Update swarm state
         self.state.update_state(self.positions, self.alive)
-        if terminated_node == self.leader:
-                self.leader = self.select_leader()
-                infos[self.leader] = "ELECTED LEADER"
 
         # 3. Broadcast connectivity estimate
-        self.broadcast({'connectivity':self.state.algebraic_connectivity})
-        self.broadcast({'leader':self.leader})
+        self.broadcast({'leader':self.leader, 'connectivity':self.state.algebraic_connectivity})
         for idx in range(NUM_DRONES):
             if idx in self.alive:
-                self.send_status(idx, {'bc': self.state.betweenees_centrality})
-
-
+                self.send_msg(idx, {'bc':self.state.betweenees_centrality.get(idx, np.inf)})
         # 4. Check completion
         done = self.state.check_completion(self.positions, self.time_executing)
 
@@ -108,11 +133,6 @@ class CoverageMissionEnv:
     def attack_network(self):
         BCs = self.state.calculate_betweenees_centrality()
         return max(BCs.items(), key=operator.itemgetter(1))[0] 
-
-
-    def select_leader(self):
-        BCs = self.state.calculate_betweenees_centrality()
-        return min(BCs.items(), key=operator.itemgetter(1))[0] 
 
 
 class State:
@@ -150,6 +170,8 @@ class State:
         self.calculate_connectivity()
         # Update graph robustness
         self.calculate_robustness()
+        # Update betweenness centrality
+        self.calculate_betweenees_centrality()
 
 
     def calculate_connectivity(self):

@@ -1,7 +1,5 @@
 import time
 import pygame 
-import logging 
-
 import numpy as np
 
 from math      import sqrt 
@@ -30,7 +28,7 @@ class Drone:
         self.name = "Drone " + str(idx)
         self.positions = [pygame.math.Vector2(p[0], p[1]) for p in positions]
         self.obstacles = [pygame.math.Vector2(o[0], o[1]) for o in obstacles]
-        self.betweenness = 0
+        self.betweenness = np.inf
         self.connectivity = 0
         
         # State variables
@@ -39,6 +37,8 @@ class Drone:
         self.guideline = pygame.math.Vector2(1,0)
         self.state = FOLLOWER
         self.election = False
+        self.candidate = self.id
+        self.term = self.betweenness
 
         # Initialize
         self.time_executing = 0
@@ -48,84 +48,98 @@ class Drone:
         self.run()
 
 
-    def read_channel(self):
-        try:
-            if not self.queues[self.id].empty():
-                orig, dest, data = self.queues[self.id].get()
-                return orig, dest, data
-            else:
-                return None, None, None
-        except Exception as e:
-            self.logger.error(e)
+    def read_msg(self):
+        if not self.queues[self.id].empty():
+            orig, dest, data = self.queues[self.id].get()
+            return orig, dest, data
+        else:
+            return None, None, None
 
 
-    def send_status(self, idx, data):
-        try:
-            self.queues[idx].put((self.id, idx, data))
-        except Exception as e:
-            self.logger.error(e)
+    def send_msg(self, idx, data):
+        self.queues[idx].put((self.id, idx, data))
 
 
     def parse(self, orig, dest, data):
-        try:
-            self.timestamps[orig] = self.time_executing
-            self.leader = data.get('leader', self.leader)
-            self.leader_position = self.positions[self.leader] if self.leader > -1 else self.leader_position
-            self.alive = data.get('attack', self.alive)
-            self.connectivity = data.get('connectivity', self.connectivity)
-            self.betweenness = data.get('bc', self.betweenness)
-            if orig != self.id:
-                self.positions[orig] = data.get('position', self.positions[orig])
-            self.guideline = data.get('guideline', self.guideline)
-        except Exception as e:
-            self.logger.error(e)
+        # Record last message from this id
+        self.timestamps[orig] = self.time_executing
+        # New leader
+        self.leader = data.get('leader', self.leader)
+        self.leader_position = self.positions[self.leader] if self.leader > -1 else self.leader_position
+        self.guideline = data.get('guideline', self.guideline)
+        # Attacks      
+        self.alive = data.get('attack', self.alive)
+        # Connectivity Metrics
+        self.connectivity = data.get('connectivity', self.connectivity)
+        self.betweenness = data.get('bc', self.betweenness)
+        # Echoes
+        if orig != self.id and orig < 20:
+            self.positions[orig] = data.get('position', self.positions[orig])
+        # Check if a new election is started
+        election = data.get('election', self.election)
+        if election and self.leader == -1:
+            self.election = election
+            self.handle_election(data, orig)
     
 
-    def gossip(self):
-        try:
-            # Send own position first
-            self.send_status(ENV_CHANNEL, {'position': self.position})
-            for idx in range(NUM_DRONES):
-                # Gossip
-                if self.leader == idx:
-                    self.send_status(idx, {'position': self.position, 'guideline': self.guideline})
-                else:
-                    self.send_status(idx, {'position': self.position})
+    def handle_election(self, data, orig):
+        term = data.get('term', np.inf)
+        # Search for min betweenness centrality
+        if term < self.term:
+            self.candidate = orig
+            self.term = term
+        # Send vote
+        self.send_msg(ENV_CHANNEL, {'election': True, 'vote': self.candidate})
             
-            while True:
-                # Read incoming messages
-                orig, dest, data = self.read_channel()
-                # Check if completed
-                if orig is None and dest is None and data is None:
-                    break
-                # Parse incoming message
-                self.parse(orig, dest, data)
-        except Exception as e:
-            self.logger.error(e)    
+
+    def gossip(self, orig, msg):
+        for idx in range(NUM_DRONES):
+            if (self.position - self.positions[idx]).magnitude() < OBSERVABLE_RADIUS and idx != orig:
+                self.send_msg(idx, msg)
+        
+
+    def update_positions(self):
+        # Send own position first
+        self.send_msg(ENV_CHANNEL, {'position': self.position})
+        for idx in range(NUM_DRONES):
+            # Update Positions
+            if self.leader == idx:
+                self.send_msg(idx, {'position': self.position, 'guideline': self.guideline})
+            else:
+                self.send_msg(idx, {'position': self.position})
+        
+        while True:
+            # Read incoming messages
+            orig, dest, data = self.read_msg()
+            # Check if completed
+            if orig is None and dest is None and data is None:
+                break
+            # Parse incoming message
+            self.parse(orig, dest, data)
+            # Gossip
+            #self.gossip(orig, data)
             
 
     def run(self):
         self.logger.info(f"INIT Drone {self.id}")
-        try:
-            while self.alive and self.position[0] < THRESHOLD_TARGET and self.time_executing < TIME_MAX_SIMULATION:
-                self.time_executing += SAMPLE_TIME
-                # Check if leader is alive
-                if self.leader in self.alive:
-                    # Communicate position
-                    self.gossip()
-                    # Calculate potential field in its position
-                    self.calculate_potential_field() 
-                else:
-                    # Start new Election
-                    self.election = True
-                    self.state = CANDIDATE
-                # Act
-                self.execute()
-                # Set next state
-                self.next()
-                time.sleep(1/FREQUENCY)
-        except Exception as e:
-            self.logger.error(e)
+        while self.alive and self.position[0] < THRESHOLD_TARGET and self.time_executing < TIME_MAX_SIMULATION:
+            self.time_executing += SAMPLE_TIME
+            # Check if leader is alive
+            if self.leader == -1:
+                # Start new Election
+                self.election = True
+                self.state = CANDIDATE
+            else:
+                self.election = False
+            # Communicate position
+            self.update_positions()
+            # Calculate potential field in its position
+            self.calculate_potential_field()
+            # Act
+            self.execute()
+            # Set next state
+            self.next()
+            time.sleep(1/FREQUENCY)
         self.logger.info(f"CLOSE Drone {self.id}")
     
 
@@ -141,8 +155,10 @@ class Drone:
             if self.leader == self.id:
                 self.state = LEADER
             # if didnt received heartbeat: self.state = CANDIDATE
-            if abs(self.time_executing - self.timestamps.get(self.leader, 0)) > 1:
+            if abs(self.time_executing - self.timestamps.get(self.leader, 0)) > SAMPLE_TIME:
+                self.leader = -1
                 self.state == CANDIDATE
+                self.election = True
             else:   
                 self.state = FOLLOWER
         elif self.state == CANDIDATE:
@@ -162,82 +178,77 @@ class Drone:
             Execute action
             Suffer effects from the environment
         """
-        try:
-            if self.state == LEADER:
-                if self.connectivity > 0:
-                    # Define guideline
-                    self.guideline = pygame.math.Vector2(1,0)
-                    # Step
-                    self.velocity += self.acceleration + self.guideline
-                else:
-                    # Define guideline
-                    self.guideline = pygame.math.Vector2(0,0)
-                    # Step
-                    self.velocity = pygame.math.Vector2(0,0)
-            elif self.state == FOLLOWER:
-                if self.connectivity > 0:
-                    # Follow leader's guidelines
-                    self.velocity += self.acceleration + self.guideline 
-                else:
-                    # Regroup behavior
-                    self.velocity = self.leader_position - self.position
-            elif self.state == CANDIDATE:
-                # Raft
-                for idx in range(NUM_DRONES):
-                    self.send_status(idx)
-            # Limit velocity
-            self.velocity = limit(self.velocity, FORWARD_SPEED)
-            # Updates position
-            self.position += self.velocity 
-            # Constrains position to limits of screen 
-            self.position = constrain(self.position, UPPER_X, UPPER_Y)
-            # Reset acceleration
-            self.acceleration *= 0
-            
-        except Exception as e:
-            self.logger.error(e)
-    
+        if self.state == LEADER:
+            if self.connectivity > 0:
+                # Define guideline
+                self.guideline = pygame.math.Vector2(1,0)
+                # Step
+                self.velocity += self.acceleration + self.guideline
+                # Update leader position
+                self.leader_position = self.position
+            else:
+                # Define guideline
+                self.guideline = pygame.math.Vector2(0,0)
+                # Step
+                self.velocity = pygame.math.Vector2(0,0)
+        elif self.state == FOLLOWER:
+            if self.connectivity > 0:
+                # Follow leader's guidelines
+                self.velocity += self.acceleration + self.guideline 
+            else:
+                # Regroup behavior
+                self.velocity = self.leader_position - self.position
+        elif self.state == CANDIDATE and self.election:
+            # Raft
+            for idx in range(NUM_DRONES):
+                self.send_msg(idx, {'election': True, 'term': self.betweenness})
+            self.send_msg(ENV_CHANNEL, {'election': True, 'vote': self.id})
+        # Limit velocity
+        self.velocity = limit(self.velocity, FORWARD_SPEED)
+        # Updates position
+        self.position += self.velocity 
+        # Constrains position to limits of screen 
+        self.position = constrain(self.position, UPPER_X, UPPER_Y)
+        # Reset acceleration
+        self.acceleration *= 0
+        
 
     def calculate_potential_field(self):
         """
             Determine resulting potential field given obstacles and other drones
         """
-        try:
-            # --- Repulsion drones
-            for position in self.positions:
-                distance = (self.position - position).magnitude()
-                if 0 < distance < OBSERVABLE_RADIUS:
-                    # Proporcional to the distance. The closer the stronger needs to be
-                    f_repulsion = (position - self.position).normalize() / distance 
-                    self.apply_force(-f_repulsion)
+        # --- Repulsion drones
+        for position in self.positions:
+            distance = (self.position - position).magnitude()
+            if 0 < distance < OBSERVABLE_RADIUS:
+                # Proporcional to the distance. The closer the stronger needs to be
+                f_repulsion = (position - self.position).normalize() / distance 
+                self.apply_force(-f_repulsion)
 
-            # --- Repulsion obstacles 
-            for pos_x, pos_y in self.obstacles:
-                position = pygame.math.Vector2(pos_x, pos_y)
-                distance = (self.position - position).magnitude()
-                if 0 < distance < OBSERVABLE_RADIUS:
-                    # Proporcional to the distance. The closer the stronger needs to be
-                    f_repulsion = 3 * (position - self.position).normalize() / sqrt(distance)
-                    self.apply_force(-f_repulsion)
+        # --- Repulsion obstacles 
+        for pos_x, pos_y in self.obstacles:
+            position = pygame.math.Vector2(pos_x, pos_y)
+            distance = (self.position - position).magnitude()
+            if 0 < distance < OBSERVABLE_RADIUS:
+                # Proporcional to the distance. The closer the stronger needs to be
+                f_repulsion = 3 * (position - self.position).normalize() / sqrt(distance)
+                self.apply_force(-f_repulsion)
 
-            # --- Repulsion walls
-            # Distance to Bottom
-            distance = UPPER_Y - self.position[1] 
-            # Proporcional to the distance. The closer the stronger needs to be
-            if distance > 0:
-                f_repulsion = pygame.math.Vector2(0,2) / sqrt(distance)
-            else:
-                f_repulsion = pygame.math.Vector2(0,2) * SEEK_FORCE
-            self.apply_force(-f_repulsion)
-            
-            # Distance to Top
-            distance = self.position[1] - LOWER_Y 
-            # Proporcional to the distance. The closer the stronger needs to be
-            if distance > 0:
-                f_repulsion = pygame.math.Vector2(0,-2) / sqrt(distance)
-            else:
-                f_repulsion = pygame.math.Vector2(0,-2) * SEEK_FORCE
-            self.apply_force(-f_repulsion)
-        except Exception as e:
-            self.logger.error(e)
-    
+        # --- Repulsion walls
+        # Distance to Bottom
+        distance = UPPER_Y - self.position[1] 
+        # Proporcional to the distance. The closer the stronger needs to be
+        if distance > 0:
+            f_repulsion = pygame.math.Vector2(0,2) / sqrt(distance)
+        else:
+            f_repulsion = pygame.math.Vector2(0,2) * SEEK_FORCE
+        self.apply_force(-f_repulsion)
+        
+        # Distance to Top
+        distance = self.position[1] - LOWER_Y 
+        # Proporcional to the distance. The closer the stronger needs to be
+        if distance > 0:
+            f_repulsion = pygame.math.Vector2(0,-2) / sqrt(distance)
+        else:
+            f_repulsion = pygame.math.Vector2(0,-2) * SEEK_FORCE
+        self.apply_force(-f_repulsion)
